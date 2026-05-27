@@ -1,6 +1,9 @@
 node_modules/
 dist/
 coverage/
+.expo/
+.expo-export-check/
+.claude/
 .env
 .env.*
 !.env.example
