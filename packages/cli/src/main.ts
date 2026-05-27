@@ -105,6 +105,11 @@ export async function runCreateIssueFlow(
   return { payload: { ...payload, body }, createdIssue };
 }
 
+export function extractCreatedIssueUrl(output: string): string | null {
+  const match = output.match(/Created issue:\s+(?<url>https?:\/\/\S+)/);
+  return match?.groups?.url ?? null;
+}
+
 async function postDedupeComment(
   github: GithubClient,
   createdIssueNumber: number,

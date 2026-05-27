@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+import { writeSync } from "node:fs";
 import { formatDoctorReport, runDoctor } from "./doctor.js";
-import { runCreateIssueFlow } from "./main.js";
+import { enqueueBackgroundJob, formatJobList, formatJobView, listJobs, loadJob, readJobLog, runWorkerJob } from "./jobs.js";
+import { extractCreatedIssueUrl, runCreateIssueFlow } from "./main.js";
 
 const program = new Command();
 
@@ -22,16 +24,69 @@ program
   });
 
 program
+  .command("__worker")
+  .description("Internal background worker.")
+  .argument("<jobId>")
+  .allowUnknownOption(false)
+  .action(async (jobId: string) => {
+    await runWorkerJob(jobId, async (job) => {
+      let output = "";
+      await runCreateIssueFlow(job.report, {
+        cwd: job.cwd,
+        now: job.args.includes("--now"),
+        review: false,
+        dryRun: job.args.includes("--dry-run"),
+      }, {
+        write: (message) => {
+          output += message;
+          process.stdout.write(message);
+        },
+      });
+      return extractCreatedIssueUrl(output);
+    });
+  });
+
+program
+  .command("jobs")
+  .description("List background issue creation jobs.")
+  .action(async () => {
+    process.stdout.write(`${formatJobList(await listJobs())}\n`);
+  });
+
+program
+  .command("job")
+  .description("View a background issue creation job.")
+  .argument("<id>")
+  .action(async (id: string) => {
+    const job = await loadJob(id);
+    const log = await readJobLog(id);
+    process.stdout.write(`${formatJobView(job, log)}\n`);
+  });
+
+program
   .command("create")
   .description("Create a polished GitHub issue from rough report text.")
   .argument("[report...]", "rough bug, feature, issue, or idea text")
   .option("--now", "create immediately as an ai-draft issue")
   .option("--review", "review the generated issue in the terminal before creating")
   .option("--dry-run", "generate and print the issue payload without creating a GitHub issue")
-  .action(async (reportParts: string[], options: { now?: boolean; review?: boolean; dryRun?: boolean }) => {
+  .option("--async", "enqueue a background job and return immediately")
+  .action(async (reportParts: string[], options: { now?: boolean; review?: boolean; dryRun?: boolean; async?: boolean }) => {
     const roughInput = reportParts.join(" ").trim();
     if (!roughInput) {
       program.error("missing rough report text");
+    }
+
+    if (options.async) {
+      const job = await enqueueBackgroundJob({
+        cwd: process.cwd(),
+        report: roughInput,
+        args: collectForwardedArgs(options),
+        nodePath: process.argv[0],
+        cliPath: process.argv[1],
+        onQueued: (queuedJob) => printQueuedJob(queuedJob.id),
+      });
+      return;
     }
 
     await runCreateIssueFlow(roughInput, {
@@ -47,10 +102,23 @@ program
   .option("--now", "create immediately as an ai-draft issue")
   .option("--review", "review the generated issue in the terminal before creating")
   .option("--dry-run", "generate and print the issue payload without creating a GitHub issue")
-  .action(async (reportParts: string[], options: { now?: boolean; review?: boolean; dryRun?: boolean }) => {
+  .option("--async", "enqueue a background job and return immediately")
+  .action(async (reportParts: string[], options: { now?: boolean; review?: boolean; dryRun?: boolean; async?: boolean }) => {
     const roughInput = reportParts.join(" ").trim();
     if (!roughInput) {
       program.error("missing rough report text");
+    }
+
+    if (options.async) {
+      const job = await enqueueBackgroundJob({
+        cwd: process.cwd(),
+        report: roughInput,
+        args: collectForwardedArgs(options),
+        nodePath: process.argv[0],
+        cliPath: process.argv[1],
+        onQueued: (queuedJob) => printQueuedJob(queuedJob.id),
+      });
+      return;
     }
 
     await runCreateIssueFlow(roughInput, {
@@ -62,3 +130,14 @@ program
   });
 
 await program.parseAsync(process.argv);
+
+function collectForwardedArgs(options: { now?: boolean; dryRun?: boolean }): string[] {
+  return [
+    ...(options.now ? ["--now"] : []),
+    ...(options.dryRun ? ["--dry-run"] : []),
+  ];
+}
+
+function printQueuedJob(id: string): void {
+  writeSync(2, `Queued ghi job ${id}\nView: ghi job ${id}\n`);
+}

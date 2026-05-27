@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "bun test src/codexIssueGenerator.test.ts src/config.test.ts src/dedupe.test.ts src/doctor.test.ts src/githubCli.test.ts src/main.test.ts src/metadata.test.ts src/templates.test.ts",
+    "test": "bun test src/codexIssueGenerator.test.ts src/config.test.ts src/dedupe.test.ts src/doctor.test.ts src/githubCli.test.ts src/jobs.test.ts src/main.test.ts src/metadata.test.ts src/templates.test.ts",
     "dev": "bun run src/cli.ts"
   },
   "dependencies": {
