@@ -34,10 +34,16 @@ describe("Codex issue generator", () => {
       roughInput: "inventory dupes after reconnect",
       git,
       templates: [{ name: "bug.md", path: ".github/ISSUE_TEMPLATE/bug.md", content: "Bug template" }],
+      sources: [{ kind: "quote", source: "user quote", content: "Nexus report says crash on load." }],
+      exploreSources: true,
+      screenshots: ["C:/tmp/report.png"],
     });
 
     expect(prompt).toContain("Do not include the original rough report text verbatim");
     expect(prompt).toContain("bug.md");
     expect(prompt).toContain("ifBars/ghi");
+    expect(prompt).toContain("Nexus report says crash on load.");
+    expect(prompt).toContain("browser, Playwright, or web access tools");
+    expect(prompt).toContain("C:/tmp/report.png");
   });
 });

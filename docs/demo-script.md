@@ -44,6 +44,27 @@
 
 6. Save it, open Drafts, and copy or share the handoff.
 
+7. Show external report intake:
+
+   ```bash
+   ghi --dry-run --no-fetch \
+     --url "https://www.nexusmods.com/example/mods/123?tab=bugs" \
+     --quote "Reporter says the game crashes after enabling the optional patch" \
+     --explore \
+     "diagnose and file this Nexus Mods report"
+   ```
+
+   Point out that mobile and external sites are treated as source context, while repo-aware issue creation still happens from the desktop CLI.
+
+8. Explain visual workflows:
+
+   ```bash
+   ghi --dry-run --screenshot "C:\captures\opened-project-card-mobile.png" \
+     "make mobile UX better once project cards are opened"
+   ```
+
+   Browser, Playwright, or future site-agent tools capture the screenshot; `ghi` turns the screenshot plus report into a maintainer-ready issue.
+
 ## Product Narrative
 
 The CLI validates the hard workflow: Codex-powered local repo understanding and GitHub issue creation. The mobile app validates cross-surface capture without pretending iOS can run the local Codex repo agent. The next product tier connects them through hosted sync and a GitHub App bot once the core issue quality is proven.

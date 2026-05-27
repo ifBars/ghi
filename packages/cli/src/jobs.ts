@@ -12,6 +12,11 @@ export type GhiJob = {
   cwd: string;
   report: string;
   args: string[];
+  urls?: string[];
+  quotes?: string[];
+  explore?: boolean;
+  fetchUrls?: boolean;
+  screenshots?: string[];
   createdAt: string;
   updatedAt: string;
   logPath: string;
@@ -23,6 +28,11 @@ export type EnqueueJobOptions = {
   cwd: string;
   report: string;
   args: string[];
+  urls?: string[];
+  quotes?: string[];
+  explore?: boolean;
+  fetchUrls?: boolean;
+  screenshots?: string[];
   nodePath: string;
   cliPath: string;
   onQueued?: (job: GhiJob) => void;
@@ -42,6 +52,11 @@ export async function enqueueBackgroundJob(options: EnqueueJobOptions): Promise<
     cwd: options.cwd,
     report: options.report,
     args: options.args,
+    urls: options.urls,
+    quotes: options.quotes,
+    explore: options.explore,
+    fetchUrls: options.fetchUrls,
+    screenshots: options.screenshots,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     logPath,

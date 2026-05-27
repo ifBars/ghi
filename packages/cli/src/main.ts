@@ -6,6 +6,7 @@ import { getGitContext } from "./git.js";
 import { GithubCli } from "./githubCli.js";
 import { appendHiddenMetadata, buildMetadata } from "./metadata.js";
 import { reviewIssueInTerminal } from "./review.js";
+import { collectSourceContexts, extractUrlsFromText } from "./sources.js";
 import { discoverIssueTemplates } from "./templates.js";
 
 export type GithubClient = {
@@ -22,6 +23,11 @@ export type CreateFlowOptions = ConfigOverrides & {
   dryRun?: boolean;
   review?: boolean;
   now?: boolean;
+  urls?: string[];
+  quotes?: string[];
+  explore?: boolean;
+  fetchUrls?: boolean;
+  screenshots?: string[];
 };
 
 export type CreateFlowDeps = {
@@ -30,6 +36,7 @@ export type CreateFlowDeps = {
   issueGenerator?: IssueGenerator;
   githubFactory?: (repoRoot: string) => GithubClient;
   reviewIssue?: (payload: IssuePayload) => Promise<boolean>;
+  collectSourceContexts?: typeof collectSourceContexts;
   write?: (message: string) => void;
 };
 
@@ -49,8 +56,22 @@ export async function runCreateIssueFlow(
 
   const gitContext = await (deps.getGitContext ?? getGitContext)(options.cwd);
   const templates = await (deps.discoverIssueTemplates ?? discoverIssueTemplates)(gitContext.root);
+  const urls = normalizeList([...(options.urls ?? []), ...extractUrlsFromText(roughInput)]);
+  const quotes = normalizeList(options.quotes ?? []);
+  const sources = await (deps.collectSourceContexts ?? collectSourceContexts)({
+    urls,
+    quotes,
+    fetchUrls: options.fetchUrls ?? true,
+  });
   const issueGenerator = deps.issueGenerator ?? new CodexIssueGenerator();
-  const payload = await issueGenerator.generate({ roughInput, git: gitContext, templates });
+  const payload = await issueGenerator.generate({
+    roughInput,
+    git: gitContext,
+    templates,
+    sources,
+    exploreSources: Boolean(options.explore || urls.length > 0),
+    screenshots: options.screenshots ?? [],
+  });
 
   if (config.creationMode === "terminal_review") {
     const approved = await (deps.reviewIssue ?? reviewIssueInTerminal)(payload);
@@ -141,6 +162,10 @@ function normalizeLabels(labels: string[]): string[] {
     }
   }
   return normalized;
+}
+
+function normalizeList(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))];
 }
 
 function formatError(error: unknown): string {

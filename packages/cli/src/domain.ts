@@ -47,6 +47,15 @@ export type IssueTemplate = {
   content: string;
 };
 
+export type SourceContext = {
+  kind: "url" | "quote";
+  source: string;
+  title?: string;
+  status?: number;
+  content: string;
+  error?: string;
+};
+
 export type GhiConfig = {
   creationMode: CreationMode;
   aiDraftLabel: string;

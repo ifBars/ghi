@@ -36,6 +36,11 @@ program
         now: job.args.includes("--now"),
         review: false,
         dryRun: job.args.includes("--dry-run"),
+        urls: job.urls ?? [],
+        quotes: job.quotes ?? [],
+        explore: job.explore,
+        fetchUrls: job.fetchUrls,
+        screenshots: job.screenshots ?? [],
       }, {
         write: (message) => {
           output += message;
@@ -71,7 +76,12 @@ program
   .option("--review", "review the generated issue in the terminal before creating")
   .option("--dry-run", "generate and print the issue payload without creating a GitHub issue")
   .option("--async", "enqueue a background job and return immediately")
-  .action(async (reportParts: string[], options: { now?: boolean; review?: boolean; dryRun?: boolean; async?: boolean }) => {
+  .option("--url <url>", "external source URL to inspect or cite", collectOption)
+  .option("--quote <text>", "quoted external report text to use as source context", collectOption)
+  .option("--screenshot <path>", "screenshot or image path to attach as visual source evidence", collectOption)
+  .option("--explore", "allow deeper source exploration with Codex network/web tools when available")
+  .option("--no-fetch", "do not prefetch URL text before handing URLs to Codex")
+  .action(async (reportParts: string[], options: CreateCommandOptions) => {
     const roughInput = reportParts.join(" ").trim();
     if (!roughInput) {
       program.error("missing rough report text");
@@ -82,6 +92,11 @@ program
         cwd: process.cwd(),
         report: roughInput,
         args: collectForwardedArgs(options),
+        urls: options.url ?? [],
+        quotes: options.quote ?? [],
+        explore: options.explore,
+        fetchUrls: options.fetch,
+        screenshots: options.screenshot ?? [],
         nodePath: process.argv[0],
         cliPath: process.argv[1],
         onQueued: (queuedJob) => printQueuedJob(queuedJob.id),
@@ -94,6 +109,11 @@ program
       now: options.now,
       review: options.review,
       dryRun: options.dryRun,
+      urls: options.url ?? [],
+      quotes: options.quote ?? [],
+      explore: options.explore,
+      fetchUrls: options.fetch,
+      screenshots: options.screenshot ?? [],
     });
   });
 
@@ -103,7 +123,12 @@ program
   .option("--review", "review the generated issue in the terminal before creating")
   .option("--dry-run", "generate and print the issue payload without creating a GitHub issue")
   .option("--async", "enqueue a background job and return immediately")
-  .action(async (reportParts: string[], options: { now?: boolean; review?: boolean; dryRun?: boolean; async?: boolean }) => {
+  .option("--url <url>", "external source URL to inspect or cite", collectOption)
+  .option("--quote <text>", "quoted external report text to use as source context", collectOption)
+  .option("--screenshot <path>", "screenshot or image path to attach as visual source evidence", collectOption)
+  .option("--explore", "allow deeper source exploration with Codex network/web tools when available")
+  .option("--no-fetch", "do not prefetch URL text before handing URLs to Codex")
+  .action(async (reportParts: string[], options: CreateCommandOptions) => {
     const roughInput = reportParts.join(" ").trim();
     if (!roughInput) {
       program.error("missing rough report text");
@@ -114,6 +139,11 @@ program
         cwd: process.cwd(),
         report: roughInput,
         args: collectForwardedArgs(options),
+        urls: options.url ?? [],
+        quotes: options.quote ?? [],
+        explore: options.explore,
+        fetchUrls: options.fetch,
+        screenshots: options.screenshot ?? [],
         nodePath: process.argv[0],
         cliPath: process.argv[1],
         onQueued: (queuedJob) => printQueuedJob(queuedJob.id),
@@ -126,10 +156,27 @@ program
       now: options.now,
       review: options.review,
       dryRun: options.dryRun,
+      urls: options.url ?? [],
+      quotes: options.quote ?? [],
+      explore: options.explore,
+      fetchUrls: options.fetch,
+      screenshots: options.screenshot ?? [],
     });
   });
 
 await program.parseAsync(process.argv);
+
+type CreateCommandOptions = {
+  now?: boolean;
+  review?: boolean;
+  dryRun?: boolean;
+  async?: boolean;
+  url?: string[];
+  quote?: string[];
+  screenshot?: string[];
+  explore?: boolean;
+  fetch?: boolean;
+};
 
 function collectForwardedArgs(options: { now?: boolean; dryRun?: boolean }): string[] {
   return [
@@ -140,4 +187,8 @@ function collectForwardedArgs(options: { now?: boolean; dryRun?: boolean }): str
 
 function printQueuedJob(id: string): void {
   writeSync(2, `Queued ghi job ${id}\nView: ghi job ${id}\n`);
+}
+
+function collectOption(value: string, previous: string[] = []): string[] {
+  return [...previous, value];
 }

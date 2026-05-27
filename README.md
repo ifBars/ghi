@@ -86,6 +86,28 @@ Force immediate creation:
 ghi --now "inventory dupes after reconnect"
 ```
 
+Create from an external report:
+
+```bash
+ghi --url "https://www.nexusmods.com/example/mods/123?tab=bugs" \
+  --quote "Reporter says the game crashes after enabling the optional patch" \
+  --screenshot "C:\\path\\to\\captured-report.png" \
+  --explore \
+  "diagnose and file the Nexus Mods bug report"
+```
+
+Use async mode when exploration may take a while:
+
+```bash
+ghi --async --url "https://www.nexusmods.com/example/mods/123?tab=bugs" \
+  --quote "Crash after install, happens before main menu" \
+  --explore \
+  "turn this external report into a repo issue"
+
+ghi jobs
+ghi job <id>
+```
+
 Preflight local requirements:
 
 ```bash
@@ -113,6 +135,10 @@ bun link
 `ghi` creates issues as the authenticated GitHub user. It ensures the `ai-draft` label when permissions allow, uses an existing triage label when present, and only applies inferred labels that already exist in the repo. After issue creation, it searches existing issues and posts an advisory possible duplicate/related comment when confidence is high enough.
 
 Mobile drafts are not repo-aware until they are handed off to the desktop CLI. This is deliberate: the repo-aware Codex step runs where the repository, GitHub CLI auth, and Codex SDK session exist.
+
+External report intake accepts `--url`, `--quote`, and `--explore`. The CLI performs a best-effort URL text prefetch and passes the source bundle into Codex. With `--explore`, Codex is instructed to use available browser, Playwright, web, or future tool adapters when the runtime supports them, especially for visual reports and third-party issue pages.
+
+Visual evidence can be attached with `--screenshot <path>`. This is designed for agent workflows that first capture an image with browser, Playwright, Playwright interactive, OpenClaw-style site agents, or a user-provided screenshot, then hand that artifact to `ghi`.
 
 ## Workspace
 

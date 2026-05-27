@@ -73,6 +73,7 @@ describe("runCreateIssueFlow", () => {
       getGitContext: async () => git,
       discoverIssueTemplates: async () => [],
       issueGenerator: { generate: async () => payload },
+      collectSourceContexts: async () => [],
       githubFactory: () => github,
       write: (message) => output.push(message),
     });
@@ -94,6 +95,7 @@ describe("runCreateIssueFlow", () => {
       getGitContext: async () => git,
       discoverIssueTemplates: async () => [],
       issueGenerator: { generate: async () => payload },
+      collectSourceContexts: async () => [],
       githubFactory: () => {
         throw new Error("should not create GitHub client");
       },
@@ -113,6 +115,7 @@ describe("runCreateIssueFlow", () => {
       getGitContext: async () => git,
       discoverIssueTemplates: async () => [],
       issueGenerator: { generate: async () => payload },
+      collectSourceContexts: async () => [],
       reviewIssue: async () => false,
       githubFactory: () => {
         throw new Error("should not create GitHub client");
@@ -121,5 +124,63 @@ describe("runCreateIssueFlow", () => {
     });
 
     expect(result.createdIssue).toBeNull();
+  });
+
+  test("passes URL and quote source context to issue generator", async () => {
+    let generatedInput: unknown;
+
+    await runCreateIssueFlow("report from https://example.com/bug", {
+      cwd: "/repo",
+      dryRun: true,
+      quotes: ["quoted external report"],
+      explore: true,
+    }, {
+      getGitContext: async () => git,
+      discoverIssueTemplates: async () => [],
+      collectSourceContexts: async (input) => [
+        { kind: "url", source: input.urls[0], content: "external page text" },
+        { kind: "quote", source: "user quote", content: input.quotes[0] },
+      ],
+      issueGenerator: {
+        generate: async (input) => {
+          generatedInput = input;
+          return payload;
+        },
+      },
+      write: () => undefined,
+    });
+
+    expect(generatedInput).toMatchObject({
+      exploreSources: true,
+      sources: [
+        { kind: "url", source: "https://example.com/bug" },
+        { kind: "quote", content: "quoted external report" },
+      ],
+    });
+  });
+
+  test("passes screenshot paths to issue generator", async () => {
+    let generatedInput: unknown;
+
+    await runCreateIssueFlow("visual bug", {
+      cwd: "/repo",
+      dryRun: true,
+      screenshots: ["C:/tmp/mobile-card.png"],
+    }, {
+      getGitContext: async () => git,
+      discoverIssueTemplates: async () => [],
+      collectSourceContexts: async () => [],
+      issueGenerator: {
+        generate: async (input) => {
+          generatedInput = input;
+          return payload;
+        },
+      },
+      write: () => undefined,
+    });
+
+    expect(generatedInput).toMatchObject({
+      screenshots: ["C:/tmp/mobile-card.png"],
+    });
   });
 });
