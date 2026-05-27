@@ -9,6 +9,7 @@
 1. Start in a git repo and run:
 
    ```bash
+   bun run dev:cli -- doctor
    bun run dev:cli -- --dry-run "inventory dupes after reconnect"
    ```
 
@@ -41,8 +42,8 @@
    - report: inventory dupes after reconnect
    - context: Discord report, screenshot note, or repro hint
 
-6. Save it, open Drafts, and share the handoff.
+6. Save it, open Drafts, and copy or share the handoff.
 
 ## Product Narrative
 
-The CLI validates the hard workflow: Codex-powered local repo understanding and GitHub issue creation. The mobile app validates cross-surface capture. The next product tier connects them through hosted sync and a GitHub App bot once the core issue quality is proven.
+The CLI validates the hard workflow: Codex-powered local repo understanding and GitHub issue creation. The mobile app validates cross-surface capture without pretending iOS can run the local Codex repo agent. The next product tier connects them through hosted sync and a GitHub App bot once the core issue quality is proven.

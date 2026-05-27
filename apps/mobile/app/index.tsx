@@ -1,4 +1,5 @@
 import * as Haptics from "expo-haptics";
+import * as Clipboard from "expo-clipboard";
 import { Link } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -64,6 +65,24 @@ export default function CaptureScreen() {
       createdAt: new Date().toISOString(),
     };
     await Share.share({ message: formatHandoff(draft), title: preview.title });
+  }
+
+  async function handleCopy() {
+    const draft: MobileDraft = {
+      id: "preview",
+      kind,
+      repository,
+      report,
+      context,
+      title: preview.title,
+      body: preview.body,
+      createdAt: new Date().toISOString(),
+    };
+    await Clipboard.setStringAsync(formatHandoff(draft));
+    if (process.env.EXPO_OS === "ios") {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+    Alert.alert("Copied", "The CLI handoff is on your clipboard.");
   }
 
   return (
@@ -143,9 +162,12 @@ export default function CaptureScreen() {
         </Text>
       </View>
 
-      <View style={{ flexDirection: "row", gap: 10 }}>
-        <ActionButton title="Save Draft" onPress={handleSave} filled />
-        <ActionButton title="Share" onPress={handleShare} />
+      <View style={{ gap: 10 }}>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <ActionButton title="Save Draft" onPress={handleSave} filled />
+          <ActionButton title="Copy" onPress={handleCopy} />
+        </View>
+        <ActionButton title="Share Handoff" onPress={handleShare} />
       </View>
     </ScrollView>
   );

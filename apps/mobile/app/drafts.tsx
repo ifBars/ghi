@@ -1,3 +1,4 @@
+import * as Clipboard from "expo-clipboard";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, PlatformColor, Pressable, ScrollView, Share, Text, View } from "react-native";
@@ -18,6 +19,11 @@ export default function DraftsScreen() {
 
   async function handleShare(draft: MobileDraft) {
     await Share.share({ message: formatHandoff(draft), title: draft.title });
+  }
+
+  async function handleCopy(draft: MobileDraft) {
+    await Clipboard.setStringAsync(formatHandoff(draft));
+    Alert.alert("Copied", "The CLI handoff is on your clipboard.");
   }
 
   async function handleDelete(draft: MobileDraft) {
@@ -61,13 +67,13 @@ export default function DraftsScreen() {
                 {draft.title}
               </Text>
               <Text selectable style={{ color: PlatformColor("secondaryLabel") }}>
-                {draft.repository || "No repository"} · {draft.kind}
+                {draft.repository || "No repository"} | {draft.kind}
               </Text>
             </View>
             <Text selectable numberOfLines={5} style={{ color: PlatformColor("secondaryLabel"), lineHeight: 20 }}>
               {draft.body}
             </Text>
-            <View style={{ flexDirection: "row", gap: 10 }}>
+            <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
               <Pressable
                 onPress={() => void handleShare(draft)}
                 style={{
@@ -80,6 +86,19 @@ export default function DraftsScreen() {
                 }}
               >
                 <Text style={{ color: "white", fontWeight: "800" }}>Share</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => void handleCopy(draft)}
+                style={{
+                  flex: 1,
+                  alignItems: "center",
+                  borderRadius: 12,
+                  borderCurve: "continuous",
+                  paddingVertical: 11,
+                  backgroundColor: PlatformColor("tertiarySystemGroupedBackground"),
+                }}
+              >
+                <Text style={{ color: PlatformColor("label"), fontWeight: "800" }}>Copy</Text>
               </Pressable>
               <Pressable
                 onPress={() =>

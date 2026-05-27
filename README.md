@@ -28,9 +28,9 @@ The Expo app is a fast mobile capture surface:
 - capture repository, rough report, and extra context
 - preview the structured issue handoff
 - save to a local draft inbox
-- share the handoff back to the desktop workflow
+- copy or share the handoff back to the desktop workflow
 
-For the current marketable MVP, mobile is intentionally capture/handoff-first. Direct mobile Codex generation and bot-authored GitHub issue creation require a hosted layer and remain the next product tier.
+For the current marketable MVP, mobile is intentionally capture/handoff-first. It does not run Codex on iOS. Direct mobile Codex generation and bot-authored GitHub issue creation require a hosted layer or remote agent bridge and remain the next product tier.
 
 ## Principles
 
@@ -50,6 +50,9 @@ bun run test
 bun run check
 bun run build
 
+# Local preflight
+bun run dev:cli -- doctor
+
 # CLI dry run through Codex
 bun run dev:cli -- --dry-run "inventory dupes after reconnect"
 
@@ -68,7 +71,7 @@ ghi "inventory dupes after reconnect"
 For local development without creating an issue:
 
 ```bash
-bun run dev -- --dry-run "inventory dupes after reconnect"
+bun run dev:cli -- --dry-run "inventory dupes after reconnect"
 ```
 
 Review before creating:
@@ -83,6 +86,20 @@ Force immediate creation:
 ghi --now "inventory dupes after reconnect"
 ```
 
+Preflight local requirements:
+
+```bash
+ghi doctor
+```
+
+Local install while developing:
+
+```bash
+bun run build
+cd packages/cli
+bun link
+```
+
 ## Requirements
 
 - Bun
@@ -94,6 +111,8 @@ ghi --now "inventory dupes after reconnect"
 ## Current MVP behavior
 
 `ghi` creates issues as the authenticated GitHub user. It ensures the `ai-draft` label when permissions allow, uses an existing triage label when present, and only applies inferred labels that already exist in the repo. After issue creation, it searches existing issues and posts an advisory possible duplicate/related comment when confidence is high enough.
+
+Mobile drafts are not repo-aware until they are handed off to the desktop CLI. This is deliberate: the repo-aware Codex step runs where the repository, GitHub CLI auth, and Codex SDK session exist.
 
 ## Workspace
 
