@@ -2,12 +2,12 @@
 import { Command } from "commander";
 import { writeSync } from "node:fs";
 import { stdin } from "node:process";
-import { enqueueBackgroundJob, formatJobList, formatJobListJson, formatJobView, formatJobViewJson, formatQueuedJobJson, listJobs, loadJob, readJobLog, runWorkerJob } from "./background/jobs.js";
-import { runCloseIssueFlow } from "./commands/close.js";
-import { extractCreatedIssueUrl, runCreateIssueFlow } from "./commands/create.js";
-import { formatDoctorReport, runDoctor } from "./commands/doctor.js";
-import { parseStructuredIssueInput } from "./intake/structured.js";
-import { startMobileBridge } from "./mobile/bridge.js";
+import { enqueueBackgroundJob, formatJobList, formatJobListJson, formatJobView, formatJobViewJson, formatQueuedJobJson, listJobs, loadJob, readJobLog, runWorkerJob } from "./background/jobs.ts";
+import { runCloseIssueFlow } from "./commands/close.ts";
+import { extractCreatedIssueUrl, runCreateIssueFlow } from "./commands/create.ts";
+import { formatDoctorReport, runDoctor } from "./commands/doctor.ts";
+import { parseStructuredIssueInput } from "./intake/structured.ts";
+import { startMobileBridge } from "./mobile/bridge.ts";
 
 const program = new Command();
 
