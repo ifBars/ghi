@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { discoverIssueTemplates } from "./templates.js";
+import { discoverIssueTemplates, summarizeIssueTemplate } from "./templates.js";
 import { parseGitHubRemote } from "../integrations/git.js";
 
 describe("templates", () => {
@@ -23,6 +23,29 @@ describe("templates", () => {
   test("returns empty list when no templates exist", async () => {
     const root = await mkdtemp(join(tmpdir(), "ghi-no-templates-"));
     expect(await discoverIssueTemplates(root)).toEqual([]);
+  });
+
+  test("summarizes template metadata and prompts for Codex selection", () => {
+    const summary = summarizeIssueTemplate({
+      name: "bug_report.yml",
+      path: ".github/ISSUE_TEMPLATE/bug_report.yml",
+      content: [
+        "name: Bug report",
+        "description: Report a production defect",
+        "labels: bug, needs-triage",
+        "body:",
+        "  - type: textarea",
+        "    attributes:",
+        "      label: Reproduction steps",
+        "      description: What did you do before it failed?",
+      ].join("\n"),
+    });
+
+    expect(summary.title).toBe("Bug report");
+    expect(summary.description).toBe("Report a production defect");
+    expect(summary.labels).toEqual(["bug", "needs-triage"]);
+    expect(summary.prompts).toContain("Reproduction steps");
+    expect(summary.prompts).toContain("What did you do before it failed?");
   });
 });
 

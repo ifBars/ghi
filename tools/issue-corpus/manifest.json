@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "corpora": [
+    {
+      "name": "good",
+      "description": "Curated maintainer-ready issues from ScheduleOne projects, React, and TypeScript.",
+      "paths": [
+        "scheduleone-good.jsonl",
+        "production-good.jsonl"
+      ],
+      "gates": {
+        "minScore": 75,
+        "minAverage": 80
+      }
+    },
+    {
+      "name": "weak",
+      "description": "Thin or noisy ScheduleOne issues that should remain below usable quality.",
+      "paths": [
+        "scheduleone-weak.jsonl"
+      ],
+      "gates": {
+        "maxScore": 60,
+        "maxAverage": 50
+      }
+    },
+    {
+      "name": "maintainer-rejected",
+      "description": "Closed public issues with explicit maintainer or triager evidence for rejection.",
+      "paths": [
+        "maintainer-rejected.jsonl"
+      ],
+      "gates": {
+        "maxScore": 80,
+        "maxAverage": 60
+      },
+      "audit": {
+        "required": true
+      }
+    }
+  ]
+}

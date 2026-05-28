@@ -64,7 +64,7 @@ bun install -g @ifbars/ghi
 You can also install directly from a GitHub release tarball:
 
 ```bash
-npm install -g https://github.com/ifBars/ghi/releases/download/v0.1.0/ifbars-ghi-0.1.0.tgz
+npm install -g https://github.com/ifBars/ghi/releases/download/v0.2.0/ifbars-ghi-0.2.0.tgz
 ```
 
 Then run `ghi` from inside a GitHub-backed repository.
@@ -129,6 +129,29 @@ Run issue generation in the background:
 ghi --async --explore "investigate recurring terminal build error"
 ghi jobs
 ghi job <id>
+```
+
+Agentic workflows can enqueue work without blocking the current agent task:
+
+```bash
+echo '{"summary":"Async worker loses the created issue URL","observed":"The job succeeds but later polling has no URL.","expected":"Agents can poll job JSON and continue work.","filesTouched":["packages/cli/src/background/jobs.ts"],"confidence":0.7}' \
+  | ghi create --async --from-stdin --json
+
+ghi jobs --json
+ghi job <id> --json
+```
+
+When `--from-stdin` receives JSON, `ghi` treats it as structured steering context for Codex. Codex still writes the production-ready issue from repo context, templates, source evidence, and quality gates.
+
+Score issue quality against real corpora:
+
+```bash
+bun run score:issues:good
+bun run score:issues:weak
+bun run score:issues:rejected
+bun run score:issues:audit
+bun run score:issues:check
+bun tools/score_issues.ts score tools/issue-corpus/scheduleone-good.jsonl
 ```
 
 Close an issue with a generated closure comment:

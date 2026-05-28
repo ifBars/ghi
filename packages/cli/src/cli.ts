@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { writeSync } from "node:fs";
-import { enqueueBackgroundJob, formatJobList, formatJobView, listJobs, loadJob, readJobLog, runWorkerJob } from "./background/jobs.js";
+import { stdin } from "node:process";
+import { enqueueBackgroundJob, formatJobList, formatJobListJson, formatJobView, formatJobViewJson, formatQueuedJobJson, listJobs, loadJob, readJobLog, runWorkerJob } from "./background/jobs.js";
 import { runCloseIssueFlow } from "./commands/close.js";
 import { extractCreatedIssueUrl, runCreateIssueFlow } from "./commands/create.js";
 import { formatDoctorReport, runDoctor } from "./commands/doctor.js";
+import { parseStructuredIssueInput } from "./intake/structured.js";
 import { startMobileBridge } from "./mobile/bridge.js";
 
 const program = new Command();
@@ -12,7 +14,7 @@ const program = new Command();
 program
   .name("ghi")
   .description("Create polished GitHub issues from rough reports using Codex.")
-  .version("0.1.0");
+  .version("0.2.0");
 
 program
   .command("doctor")
@@ -56,18 +58,21 @@ program
 program
   .command("jobs")
   .description("List background issue creation jobs.")
-  .action(async () => {
-    process.stdout.write(`${formatJobList(await listJobs())}\n`);
+  .option("--json", "print machine-readable job metadata")
+  .action(async (options: JsonOption) => {
+    const jobs = await listJobs();
+    process.stdout.write(options.json ? formatJobListJson(jobs) : `${formatJobList(jobs)}\n`);
   });
 
 program
   .command("job")
   .description("View a background issue creation job.")
   .argument("<id>")
-  .action(async (id: string) => {
+  .option("--json", "print machine-readable job metadata and log")
+  .action(async (id: string, options: JsonOption) => {
     const job = await loadJob(id);
     const log = await readJobLog(id);
-    process.stdout.write(`${formatJobView(job, log)}\n`);
+    process.stdout.write(options.json ? formatJobViewJson(job, log) : `${formatJobView(job, log)}\n`);
   });
 
 program
@@ -123,8 +128,10 @@ program
   .option("--screenshot <path>", "screenshot or image path to attach as visual source evidence", collectOption)
   .option("--explore", "allow deeper source exploration with Codex network/web tools when available")
   .option("--no-fetch", "do not prefetch URL text before handing URLs to Codex")
+  .option("--from-stdin", "read rough or structured JSON issue context from stdin")
+  .option("--json", "print machine-readable async job metadata")
   .action(async (reportParts: string[], options: CreateCommandOptions) => {
-    const roughInput = reportParts.join(" ").trim();
+    const roughInput = await resolveRoughInput(reportParts, options);
     if (!roughInput) {
       program.error("missing rough report text");
     }
@@ -141,8 +148,11 @@ program
         screenshots: options.screenshot ?? [],
         nodePath: process.argv[0],
         cliPath: process.argv[1],
-        onQueued: (queuedJob) => printQueuedJob(queuedJob.id),
+        onQueued: options.json ? undefined : (queuedJob) => printQueuedJob(queuedJob.id),
       });
+      if (options.json) {
+        process.stdout.write(formatQueuedJobJson(job));
+      }
       return;
     }
 
@@ -170,8 +180,10 @@ program
   .option("--screenshot <path>", "screenshot or image path to attach as visual source evidence", collectOption)
   .option("--explore", "allow deeper source exploration with Codex network/web tools when available")
   .option("--no-fetch", "do not prefetch URL text before handing URLs to Codex")
+  .option("--from-stdin", "read rough or structured JSON issue context from stdin")
+  .option("--json", "print machine-readable async job metadata")
   .action(async (reportParts: string[], options: CreateCommandOptions) => {
-    const roughInput = reportParts.join(" ").trim();
+    const roughInput = await resolveRoughInput(reportParts, options);
     if (!roughInput) {
       program.error("missing rough report text");
     }
@@ -188,8 +200,11 @@ program
         screenshots: options.screenshot ?? [],
         nodePath: process.argv[0],
         cliPath: process.argv[1],
-        onQueued: (queuedJob) => printQueuedJob(queuedJob.id),
+        onQueued: options.json ? undefined : (queuedJob) => printQueuedJob(queuedJob.id),
       });
+      if (options.json) {
+        process.stdout.write(formatQueuedJobJson(job));
+      }
       return;
     }
 
@@ -218,6 +233,12 @@ type CreateCommandOptions = {
   screenshot?: string[];
   explore?: boolean;
   fetch?: boolean;
+  fromStdin?: boolean;
+  json?: boolean;
+};
+
+type JsonOption = {
+  json?: boolean;
 };
 
 type CloseCommandOptions = {
@@ -254,4 +275,23 @@ function parsePort(value: string): number {
     throw new Error(`invalid port: ${value}`);
   }
   return port;
+}
+
+async function resolveRoughInput(reportParts: string[], options: CreateCommandOptions): Promise<string> {
+  const inline = reportParts.join(" ").trim();
+  if (!options.fromStdin) {
+    return inline;
+  }
+
+  const input = await readStdin();
+  const parsed = parseStructuredIssueInput(input);
+  return [inline, parsed].filter(Boolean).join("\n\n");
+}
+
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString("utf8");
 }

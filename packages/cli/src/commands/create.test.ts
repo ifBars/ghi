@@ -15,7 +15,33 @@ const payload: IssuePayload = {
   title: "Inventory duplicates after reconnect",
   kind: "bug",
   labels: ["bug"],
-  body: "## Summary\n\nInventory duplicates after reconnecting.",
+  body: `## Summary
+
+Inventory duplicates after reconnecting to an existing session.
+
+## Environment
+
+- Version: 1.2.3
+- Platform: Windows
+
+## Steps to Reproduce
+
+1. Start a session with inventory items.
+2. Disconnect the client.
+3. Reconnect to the same session.
+
+## Observed Behavior
+
+The same inventory item appears twice after reconnecting.
+
+## Expected Behavior
+
+Inventory remains stable and each item appears once.
+
+## Evidence
+
+Reported from reconnect testing; no stack trace is available yet.
+`,
   confidence: 0.8,
   missingInformation: [],
   contextSummary: ["git metadata"],
@@ -150,6 +176,39 @@ describe("runCreateIssueFlow", () => {
     expect(result.createdIssue).toBeNull();
     expect(output.join("")).toContain("Inventory duplicates after reconnect");
     expect(output.join("")).toContain("<!-- ghi:");
+  });
+
+  test("revises low-scoring generated drafts with scoring feedback", async () => {
+    const output: string[] = [];
+    const generatedInputs: unknown[] = [];
+    const weakPayload: IssuePayload = {
+      ...payload,
+      body: "## Summary\n\nInventory duplicates.",
+    };
+
+    const result = await runCreateIssueFlow("inventory duplicates after reconnect", {
+      cwd: "/repo",
+      dryRun: true,
+    }, {
+      getGitContext: async () => git,
+      discoverIssueTemplates: async () => [],
+      issueGenerator: {
+        generate: async (input) => {
+          generatedInputs.push(input);
+          return generatedInputs.length === 1 ? weakPayload : payload;
+        },
+      },
+      collectSourceContexts: async () => [],
+      write: (message) => output.push(message),
+    });
+
+    expect(result.createdIssue).toBeNull();
+    expect(generatedInputs).toHaveLength(2);
+    expect(generatedInputs[1]).toMatchObject({
+      previousDraft: weakPayload,
+    });
+    expect((generatedInputs[1] as { revisionFeedback?: string[] }).revisionFeedback?.join("\n")).toContain("expected_observed_repro");
+    expect(output.join("")).toContain("Quality revision 1");
   });
 
   test("terminal review can cancel creation", async () => {

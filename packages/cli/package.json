@@ -1,6 +1,6 @@
 {
   "name": "@ifbars/ghi",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "AI-native GitHub issue intake CLI for developers.",
   "license": "MIT",
   "author": "ifBars",

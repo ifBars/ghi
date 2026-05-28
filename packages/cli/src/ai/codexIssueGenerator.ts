@@ -1,5 +1,6 @@
 import { Codex } from "@openai/codex-sdk";
 import { issuePayloadSchema, type GitContext, type IssuePayload, type IssueTemplate, type SourceContext } from "../core/domain.js";
+import { summarizeIssueTemplate } from "../intake/templates.js";
 
 export type IssueGenerationInput = {
   roughInput: string;
@@ -8,6 +9,8 @@ export type IssueGenerationInput = {
   sources: SourceContext[];
   exploreSources: boolean;
   screenshots: string[];
+  previousDraft?: IssuePayload;
+  revisionFeedback?: string[];
 };
 
 export type IssueGenerator = {
@@ -66,21 +69,35 @@ export function buildIssuePrompt(input: IssueGenerationInput): string {
   const templates = input.templates.map((template) => ({
     name: template.name,
     path: template.path,
+    summary: summarizeIssueTemplate(template),
     content: template.content.slice(0, 8000),
   }));
 
   return JSON.stringify(
     {
       task: "Transform the rough report into a polished GitHub issue payload.",
+      codexRole: [
+        "You are the middle layer between rough capture context and the production GitHub issue.",
+        "The user is handing you context to steer issue creation; do not treat every note as final issue wording.",
+        "Use repository evidence, templates, source snippets, screenshots, and stated uncertainty to produce the maintainer-facing artifact.",
+      ],
       hardRequirements: [
         "Do not include the original rough report text verbatim in the issue body.",
         "Do not include a visible AI-generated disclosure.",
-        "Use repository issue templates when they apply.",
+        "Use repository issue templates when they apply; if multiple templates are present, choose the best fit from template names, metadata, and prompts.",
+        "Map available facts into the selected template's fields and mark unknowns explicitly instead of inventing details.",
         "Prefer precise, maintainer-ready language.",
         "Include missing information as a section in the body when needed.",
         "Return only JSON that matches the provided schema.",
       ],
       roughReport: input.roughInput,
+      revision: input.previousDraft
+        ? {
+            instruction: "Revise the previous draft using the scoring feedback. Return a complete replacement payload, not a patch.",
+            previousDraft: input.previousDraft,
+            scoringFeedback: input.revisionFeedback ?? [],
+          }
+        : null,
       git: {
         branch: input.git.branch,
         commit: input.git.commit,
@@ -126,7 +143,9 @@ export function buildIssuePrompt(input: IssueGenerationInput): string {
         "Use Markdown headings.",
         "Mention git branch and commit only when relevant to the report.",
         "If external source context is present, include a Source Context or External Report section with verified facts and uncertainty.",
-        "If screenshots are attached, include a Visual Evidence section with the visible problem and any uncertainty.",
+        "If mobile routing context is present, use it to validate the target repository but do not expose routing mechanics unless needed for maintainer action.",
+        "If screenshots or uploaded files are attached, include an Evidence section with the visible or documented facts and any uncertainty.",
+        "Avoid dumping local file paths into the issue body unless the path itself is actionable for the maintainer.",
       ],
     },
     null,

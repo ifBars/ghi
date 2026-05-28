@@ -1,8 +1,8 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { mkdir, writeFile } from "node:fs/promises";
-import { networkInterfaces } from "node:os";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { homedir, networkInterfaces } from "node:os";
 import { extname, join } from "node:path";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
 import type { QrcodeTerminal } from "qrcode-terminal";
 import { enqueueBackgroundJob, getJobsDir } from "../background/jobs.js";
@@ -41,7 +41,7 @@ export async function startMobileBridge(options: MobileBridgeOptions): Promise<v
   const write = options.write ?? ((message) => process.stdout.write(message));
   const git = await getGitContext(options.cwd);
   const repo = git.remoteOwner && git.remoteName ? `${git.remoteOwner}/${git.remoteName}` : null;
-  const token = options.token?.trim() || randomBytes(24).toString("base64url");
+  const token = options.token?.trim() || await loadOrCreatePersistedToken(git.root);
   const host = options.host || getPreferredHost();
   const port = options.port ?? 3874;
   const publicUrl = `http://${host}:${port}`;
@@ -84,18 +84,21 @@ export async function startMobileBridge(options: MobileBridgeOptions): Promise<v
 
         if (repo && body.repo && normalizeRepo(body.repo) !== normalizeRepo(repo)) {
           writeResponse(response, 409, {
-            error: `desktop bridge is serving ${repo}, but mobile selected ${body.repo}`,
+            error: buildRepoMismatchError(repo, body.repo),
             repo,
           });
           return;
         }
 
         const savedAttachments = await saveMobileAttachments(body.attachments ?? []);
-        const roughInput = [
-          body.kind ? `[${body.kind}] ${report}` : report,
-          body.context?.trim() ? `Mobile context:\n${body.context.trim()}` : "",
-          savedAttachments.summary ? `Mobile evidence:\n${savedAttachments.summary}` : "",
-        ].filter(Boolean).join("\n\n");
+        const roughInput = buildMobileRoughInput({
+          kind: body.kind,
+          report,
+          repo,
+          selectedRepo: body.repo,
+          context: body.context,
+          evidenceSummary: savedAttachments.summary,
+        });
 
         const job = await enqueueBackgroundJob({
           cwd: git.root,
@@ -187,6 +190,64 @@ export function normalizeRepo(value: string): string {
   return value.trim().toLowerCase().replace(/\.git$/, "");
 }
 
+export async function loadOrCreatePersistedToken(repoRoot: string): Promise<string> {
+  const tokenPath = persistedTokenPath(repoRoot);
+  const existing = await readFile(tokenPath, "utf8").catch(() => "");
+  const parsed = existing.trim();
+  if (parsed) {
+    return parsed;
+  }
+
+  const token = randomBytes(24).toString("base64url");
+  await mkdir(getBridgeSecretsDir(), { recursive: true });
+  await writeFile(tokenPath, `${token}\n`, { encoding: "utf8", mode: 0o600 });
+  return token;
+}
+
+export function persistedTokenPath(repoRoot: string): string {
+  const key = createHash("sha256").update(repoRoot.toLowerCase()).digest("hex").slice(0, 32);
+  return join(getBridgeSecretsDir(), `${key}.token`);
+}
+
+function getBridgeSecretsDir(): string {
+  const base = process.env.LOCALAPPDATA || join(homedir(), ".local", "share");
+  return join(base, "ghi", "mobile-bridges");
+}
+
+export function buildRepoMismatchError(servedRepo: string, selectedRepo: string): string {
+  return [
+    `Desktop bridge is serving ${servedRepo}, but mobile selected ${selectedRepo}.`,
+    "Start `ghi mobile serve` from the selected repo checkout, or change the mobile capture repository to match this bridge.",
+  ].join(" ");
+}
+
+export function buildMobileRoughInput(input: {
+  kind?: string;
+  report: string;
+  repo: string | null;
+  selectedRepo?: string;
+  context?: string;
+  evidenceSummary?: string;
+}): string {
+  return [
+    input.kind ? `[${input.kind}] ${input.report}` : input.report,
+    [
+      "Mobile routing:",
+      input.repo ? `- Desktop bridge repository: ${input.repo}` : "- Desktop bridge repository: unknown",
+      input.selectedRepo?.trim() ? `- Mobile selected repository: ${input.selectedRepo.trim()}` : "",
+      "- Codex should use this as routing context only; create the production issue from repo evidence, templates, and supplied report details.",
+    ].filter(Boolean).join("\n"),
+    input.context?.trim() ? `Mobile context:\n${input.context.trim()}` : "",
+    input.evidenceSummary
+      ? [
+          "Mobile evidence:",
+          "Use these uploaded files as source evidence. Inspect what is available, summarize relevant facts, and avoid citing local paths unless the path itself is actionable.",
+          input.evidenceSummary,
+        ].join("\n")
+      : "",
+  ].filter(Boolean).join("\n\n");
+}
+
 async function saveMobileAttachments(attachments: MobileBridgeAttachment[]): Promise<{
   summary: string;
   screenshots: string[];
@@ -211,13 +272,37 @@ async function saveMobileAttachments(attachments: MobileBridgeAttachment[]): Pro
     if (kind === "image") {
       screenshots.push(filePath);
     }
-    summary.push(`- ${filename} (${kind}${attachment.mimeType ? `, ${attachment.mimeType}` : ""}) saved to ${filePath}`);
+    summary.push(formatMobileEvidenceSummary({
+      filename,
+      kind,
+      mimeType: attachment.mimeType,
+      size: attachment.size,
+      filePath,
+    }));
   }
 
   return {
     summary: summary.join("\n"),
     screenshots,
   };
+}
+
+export function formatMobileEvidenceSummary(input: {
+  filename: string;
+  kind: "image" | "file";
+  mimeType?: string;
+  size?: number;
+  filePath: string;
+}): string {
+  const details = [
+    input.mimeType,
+    typeof input.size === "number" ? `${input.size} bytes` : undefined,
+  ].filter(Boolean).join(", ");
+  const metadata = details ? `${input.kind}, ${details}` : input.kind;
+  return [
+    `- ${input.filename} (${metadata})`,
+    `  local: ${input.filePath}`,
+  ].join("\n");
 }
 
 export function sanitizeFileName(value: string): string {

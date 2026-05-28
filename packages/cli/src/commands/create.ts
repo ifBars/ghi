@@ -7,6 +7,7 @@ import { GithubCli } from "../integrations/githubCli.js";
 import { buildDedupeSearchQuery, formatRelationshipComment, rankSimpleRelationships } from "../intake/dedupe.js";
 import { collectSourceContexts, extractUrlsFromText } from "../intake/sources.js";
 import { discoverIssueTemplates } from "../intake/templates.js";
+import { assessIssueQuality, formatQualityWarnings, type IssueQualityReport } from "../intake/quality.js";
 import { reviewIssueInTerminal } from "../ui/review.js";
 
 export type GithubClient = {
@@ -64,14 +65,22 @@ export async function runCreateIssueFlow(
     fetchUrls: options.fetchUrls ?? true,
   });
   const issueGenerator = deps.issueGenerator ?? new CodexIssueGenerator();
-  const payload = await issueGenerator.generate({
+  const generationInput = {
     roughInput,
     git: gitContext,
     templates,
     sources,
     exploreSources: Boolean(options.explore || urls.length > 0),
     screenshots: options.screenshots ?? [],
-  });
+  };
+  const { payload, quality } = await generateMaintainerReadyIssue(issueGenerator, generationInput, roughInput, write);
+  const qualityWarnings = formatQualityWarnings(quality);
+  if (qualityWarnings) {
+    write(qualityWarnings);
+  }
+  if (quality.blocking.length > 0) {
+    throw new Error(`Issue draft failed quality gates: ${quality.blocking.join(" ")}`);
+  }
 
   if (config.creationMode === "terminal_review") {
     const approved = await (deps.reviewIssue ?? reviewIssueInTerminal)(payload);
@@ -124,6 +133,32 @@ export async function runCreateIssueFlow(
   }
 
   return { payload: { ...payload, body }, createdIssue };
+}
+
+async function generateMaintainerReadyIssue(
+  issueGenerator: IssueGenerator,
+  input: Parameters<IssueGenerator["generate"]>[0],
+  roughInput: string,
+  write: (message: string) => void,
+): Promise<{ payload: IssuePayload; quality: IssueQualityReport }> {
+  let payload = await issueGenerator.generate(input);
+  let quality = assessIssueQuality(roughInput, payload);
+
+  for (let attempt = 1; attempt <= 2 && shouldRequestQualityRevision(quality); attempt += 1) {
+    write(`Quality revision ${attempt}: issue draft scored ${quality.score.total}/${quality.score.maximum}; asking Codex to revise with scoring feedback.\n`);
+    payload = await issueGenerator.generate({
+      ...input,
+      previousDraft: payload,
+      revisionFeedback: quality.revisionFeedback,
+    });
+    quality = assessIssueQuality(roughInput, payload);
+  }
+
+  return { payload, quality };
+}
+
+function shouldRequestQualityRevision(quality: IssueQualityReport): boolean {
+  return quality.blocking.length > 0 || quality.score.total < 75;
 }
 
 export function extractCreatedIssueUrl(output: string): string | null {

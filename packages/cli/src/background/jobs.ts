@@ -191,6 +191,10 @@ export function formatJobList(jobs: GhiJob[]): string {
     .join("\n");
 }
 
+export function formatJobListJson(jobs: GhiJob[]): string {
+  return `${JSON.stringify({ jobs: jobs.map(toJobJson) }, null, 2)}\n`;
+}
+
 export function formatJobView(job: GhiJob, log: string): string {
   return [
     `Job: ${job.id}`,
@@ -207,6 +211,26 @@ export function formatJobView(job: GhiJob, log: string): string {
     "Log:",
     log.trim() || "(empty)",
   ].filter((line): line is string => line !== null).join("\n");
+}
+
+export function formatJobViewJson(job: GhiJob, log: string): string {
+  return `${JSON.stringify({ job: toJobJson(job), log }, null, 2)}\n`;
+}
+
+export function formatQueuedJobJson(job: GhiJob): string {
+  return `${JSON.stringify({ job: toJobJson(job) }, null, 2)}\n`;
+}
+
+function toJobJson(job: GhiJob) {
+  return {
+    id: job.id,
+    status: job.status,
+    cwd: job.cwd,
+    createdAt: job.createdAt,
+    updatedAt: job.updatedAt,
+    resultUrl: job.resultUrl,
+    error: job.error,
+  };
 }
 
 function jobPath(id: string): string {

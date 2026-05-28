@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { formatJobList, formatJobView, type GhiJob } from "./jobs.js";
+import { formatJobList, formatJobListJson, formatJobView, formatJobViewJson, formatQueuedJobJson, type GhiJob } from "./jobs.js";
 
 const job: GhiJob = {
   id: "20260527120000-abc123",
@@ -31,5 +31,15 @@ describe("jobs formatting", () => {
     expect(formatted).toContain("Status: succeeded");
     expect(formatted).toContain("Result: https://github.com/o/r/issues/1");
     expect(formatted).toContain("Make mobile UX better");
+  });
+
+  test("formats machine-readable job output", () => {
+    expect(JSON.parse(formatJobListJson([job])).jobs[0]).toMatchObject({
+      id: job.id,
+      status: "succeeded",
+      resultUrl: job.resultUrl,
+    });
+    expect(JSON.parse(formatJobViewJson(job, "log text")).log).toBe("log text");
+    expect(JSON.parse(formatQueuedJobJson(job)).job.id).toBe(job.id);
   });
 });

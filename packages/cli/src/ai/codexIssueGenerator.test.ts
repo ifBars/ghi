@@ -40,10 +40,41 @@ describe("Codex issue generator", () => {
     });
 
     expect(prompt).toContain("Do not include the original rough report text verbatim");
+    expect(prompt).toContain("middle layer between rough capture context and the production GitHub issue");
     expect(prompt).toContain("bug.md");
+    expect(prompt).toContain("choose the best fit from template names");
     expect(prompt).toContain("ifBars/ghi");
     expect(prompt).toContain("Nexus report says crash on load.");
     expect(prompt).toContain("browser, Playwright, or web access tools");
     expect(prompt).toContain("C:/tmp/report.png");
+    expect(prompt).toContain("Avoid dumping local file paths");
+  });
+
+  test("prompt includes prior draft and scoring feedback for revisions", () => {
+    const prompt = buildIssuePrompt({
+      roughInput: "inventory dupes after reconnect",
+      git,
+      templates: [],
+      sources: [],
+      exploreSources: false,
+      screenshots: [],
+      previousDraft: {
+        title: "Inventory duplicates",
+        kind: "bug",
+        labels: ["bug"],
+        body: "## Summary\n\nInventory duplicates.",
+        confidence: 0.4,
+        missingInformation: [],
+        contextSummary: [],
+      },
+      revisionFeedback: [
+        "Current issue quality score: 44/100 (bad). Target at least 75/100.",
+        "expected_observed_repro: add observed, expected, and reproduction steps.",
+      ],
+    });
+
+    expect(prompt).toContain("Revise the previous draft using the scoring feedback");
+    expect(prompt).toContain("expected_observed_repro");
+    expect(prompt).toContain("Inventory duplicates.");
   });
 });
