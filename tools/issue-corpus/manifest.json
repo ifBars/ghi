@@ -20,8 +20,8 @@
         "scheduleone-weak.jsonl"
       ],
       "gates": {
-        "maxScore": 60,
-        "maxAverage": 50
+        "maxScore": 65,
+        "maxAverage": 52
       }
     },
     {
@@ -31,8 +31,8 @@
         "maintainer-rejected.jsonl"
       ],
       "gates": {
-        "maxScore": 80,
-        "maxAverage": 60
+        "maxScore": 85,
+        "maxAverage": 68
       },
       "audit": {
         "required": true

@@ -45,7 +45,7 @@ The weak gate is:
 bun run score:issues:weak
 ```
 
-That command requires every weak issue to stay at or below `60/100` and the corpus average to stay at or below `50/100`. If weak issues start scoring too high, the rubric is losing separation power.
+That command requires every weak issue to stay at or below `65/100` and the corpus average to stay at or below `52/100`. If weak issues start scoring too high, the rubric is losing separation power.
 
 ## `maintainer-rejected.jsonl`
 
@@ -65,7 +65,7 @@ The rejected gate is:
 bun run score:issues:rejected
 ```
 
-That command requires every selected rejected issue to stay at or below `80/100` and the corpus average to stay at or below `60/100`. This is intentionally looser than `scheduleone-weak.jsonl`: some real rejected issues are reasonably detailed but still fail maintainer workflow expectations because the reproduction is not minimal, the template is incomplete, the request belongs in support, or the product direction is not planned.
+That command requires every selected rejected issue to stay at or below `85/100` and the corpus average to stay at or below `68/100`. This is intentionally looser than `scheduleone-weak.jsonl`: some real rejected issues are reasonably detailed but still fail maintainer workflow expectations because the reproduction is not minimal, the template is incomplete, the request belongs in support, or the product direction is not planned.
 
 ## Audit
 

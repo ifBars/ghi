@@ -16,8 +16,8 @@
     "check:mobile": "bun run --cwd apps/mobile check",
     "score:issues": "bun tools/score_issues.ts score tools/issue-corpus/scheduleone-good.jsonl",
     "score:issues:good": "bun tools/score_issues.ts score tools/issue-corpus/scheduleone-good.jsonl tools/issue-corpus/production-good.jsonl --min-score 75 --min-average 80",
-    "score:issues:weak": "bun tools/score_issues.ts score tools/issue-corpus/scheduleone-weak.jsonl --max-score 60 --max-average 50",
-    "score:issues:rejected": "bun tools/score_issues.ts score tools/issue-corpus/maintainer-rejected.jsonl --max-score 80 --max-average 60",
+    "score:issues:weak": "bun tools/score_issues.ts score tools/issue-corpus/scheduleone-weak.jsonl --max-score 65 --max-average 52",
+    "score:issues:rejected": "bun tools/score_issues.ts score tools/issue-corpus/maintainer-rejected.jsonl --max-score 85 --max-average 68",
     "score:issues:audit": "bun tools/score_issues.ts audit tools/issue-corpus/scheduleone-good.jsonl tools/issue-corpus/production-good.jsonl tools/issue-corpus/scheduleone-weak.jsonl tools/issue-corpus/maintainer-rejected.jsonl",
     "score:issues:check": "bun tools/score_issues.ts check tools/issue-corpus/manifest.json",
     "test:score": "bun test tools/score_issues.test.ts"

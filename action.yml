@@ -1,0 +1,76 @@
+name: ghi issue score
+description: Score GitHub issues with ghi's deterministic issue-quality rubric.
+author: ifBars
+
+inputs:
+  github-token:
+    description: GitHub token with issues write permission when labels or comments are enabled.
+    required: false
+    default: ""
+  apply-labels:
+    description: Add/update score and grade labels on the issue.
+    required: false
+    default: "true"
+  score-label-prefix:
+    description: Prefix for numeric score labels.
+    required: false
+    default: "ghi-score/"
+  grade-label-prefix:
+    description: Prefix for quality grade labels.
+    required: false
+    default: "ghi-quality/"
+  comment-on-low-score:
+    description: Add or update a guidance comment when the score is below the threshold.
+    required: false
+    default: "true"
+  low-score-threshold:
+    description: Score threshold on a 0.0-10.0 scale for guidance comments.
+    required: false
+    default: "6.6"
+  fail-on-low-score:
+    description: Fail the workflow when the score is below the threshold.
+    required: false
+    default: "false"
+  ignore-maintainer-authored:
+    description: Skip comments for issues opened by collaborators, members, or owners.
+    required: false
+    default: "true"
+  create-labels:
+    description: Create missing ghi score labels before applying them.
+    required: false
+    default: "true"
+
+outputs:
+  score:
+    description: Numeric issue quality score on a 0.0-10.0 scale.
+    value: ${{ steps.score.outputs.score }}
+  score-percent:
+    description: Raw issue quality score on a 0-100 scale.
+    value: ${{ steps.score.outputs.score-percent }}
+  grade:
+    description: Issue quality grade.
+    value: ${{ steps.score.outputs.grade }}
+  commented:
+    description: Whether the action created or updated a guidance comment.
+    value: ${{ steps.score.outputs.commented }}
+  labels-applied:
+    description: Whether the action applied score or grade labels.
+    value: ${{ steps.score.outputs.labels-applied }}
+
+runs:
+  using: composite
+  steps:
+    - uses: oven-sh/setup-bun@v2
+    - id: score
+      shell: bash
+      env:
+        GHI_GITHUB_TOKEN: ${{ inputs.github-token || github.token }}
+        GHI_APPLY_LABELS: ${{ inputs.apply-labels }}
+        GHI_SCORE_LABEL_PREFIX: ${{ inputs.score-label-prefix }}
+        GHI_GRADE_LABEL_PREFIX: ${{ inputs.grade-label-prefix }}
+        GHI_COMMENT_ON_LOW_SCORE: ${{ inputs.comment-on-low-score }}
+        GHI_LOW_SCORE_THRESHOLD: ${{ inputs.low-score-threshold }}
+        GHI_FAIL_ON_LOW_SCORE: ${{ inputs.fail-on-low-score }}
+        GHI_IGNORE_MAINTAINER_AUTHORED: ${{ inputs.ignore-maintainer-authored }}
+        GHI_CREATE_LABELS: ${{ inputs.create-labels }}
+      run: bun "$GITHUB_ACTION_PATH/packages/cli/src/actions/scoreIssue.ts"

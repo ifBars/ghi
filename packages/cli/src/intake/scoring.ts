@@ -268,30 +268,40 @@ function scoreActionability(issue: ScoredIssue): DimensionScore {
   }
   if (hasAny(issue.body, ["summary", "context", "problem", "impact"])) points += 4;
   if (hasAny(issue.body, ["acceptance", "done when", "task", "fix", "proposal", "expected"])) points += 4;
+  if (hasMaintainerAction(issue)) points += 3;
+  if (hasMaintenanceTask(issue)) points += 4;
+  if (hasConcreteIdentifier(issue.body) && wordCount(issue.body) >= 15) points += 2;
   if (issue.labels.length > 0) points += 3;
   const placeholders = templatePlaceholderCounts(issue.body);
   if (placeholders.strong >= 2 || placeholders.blank >= 4) {
-    points -= 4;
+    points = Math.min(points - 8, 8);
     notes.push("warn:template placeholders are still present");
+  } else if (hasAny(issue.body, ["obvious", "_no response_"]) && wordCount(issue.body) < 50) {
+    points -= 8;
+    notes.push("warn:request is too thin to preserve as a maintainer-ready issue");
   }
   return { name: "actionability", score: clamp(points, 0, 20), maximum: 20, notes };
 }
 
 function scoreBehavior(issue: ScoredIssue): DimensionScore {
   const notes: string[] = [];
-  const isBug = issue.labels.some((label) => label.toLowerCase() === "bug") || hasAny(issue.title, ["bug", "crash", "fail", "error", "regression"]);
+  const isBug = issue.labels.some((label) => label.toLowerCase() === "bug") || hasAny(issue.title, ["bug", "crash", "fail", "regression"]);
   let points = isBug ? 0 : 4;
-  if (hasAny(issue.body, ["observed", "actual", "what happened"])) {
+  if (!isBug && hasMaintainerAction(issue) && hasConcreteIdentifier(`${issue.title}\n${issue.body}`)) points += 4;
+  if (!isBug && hasMaintenanceTask(issue)) points += 4;
+  if (!isBug && hasMeaningfulUseCase(issue.body)) points += 4;
+  if (!isBug && hasConcreteIdentifier(`${issue.title}\n${issue.body}`)) points += 3;
+  if (hasAny(issue.body, ["observed", "actual", "what happened"]) || (isBug && hasObservedOutcome(issue.body))) {
     points += 4;
   } else if (isBug) {
     notes.push("warn:bug lacks observed or actual behavior");
   }
-  if (hasAny(issue.body, ["expected", "should happen"])) {
+  if (hasAny(issue.body, ["expected", "should happen", "expect "]) || (isBug && hasExpectedOutcome(issue.body))) {
     points += 4;
   } else if (isBug) {
     notes.push("warn:bug lacks expected behavior");
   }
-  if (hasAny(issue.body, ["repro", "steps", "to reproduce"])) {
+  if (hasReproductionDetails(issue.body)) {
     points += 4;
   } else if (isBug) {
     notes.push("warn:bug lacks reproduction steps");
@@ -304,9 +314,14 @@ function scoreSpecificity(issue: ScoredIssue): DimensionScore {
   const notes: string[] = [];
   let points = 0;
   if (/\b[\w.-]+\.(ts|tsx|js|py|rs|cs|go|java|md|yml|yaml)\b/.test(issue.body)) points += 4;
-  if (/`[^`]{3,}`/.test(issue.body) || issue.body.includes("```")) points += 3;
+  if (/`[^`]{3,}`/.test(issue.body) || hasRealCodeFence(issue.body)) points += 3;
   if (/\b(v?\d+\.\d+|\d{4}-\d{2}-\d{2}|#[0-9]+)\b/.test(issue.body)) points += 3;
   if (hasAny(issue.body, ["command", "stack", "trace", "log", "output", "request", "response"])) points += 3;
+  if (hasConcreteIdentifier(`${issue.title}\n${issue.body}`)) points += 4;
+  if (hasAny(issue.body, ["scenario", "steps to reproduce", "steps to repro"]) || /^\s*\d+\.\s+/m.test(issue.body)) points += 3;
+  if (hasAny(issue.body, ["saw it in", "from ", "within "]) && hasConcreteIdentifier(issue.body)) points += 3;
+  if (hasMaintenanceTask(issue)) points += 3;
+  if (hasExternalReferenceEvidence(issue.body)) points += 4;
   if (uniqueWords(issue.body).size >= 40) {
     points += 2;
   } else {
@@ -319,10 +334,15 @@ function scoreEvidence(issue: ScoredIssue): DimensionScore {
   const notes: string[] = [];
   let points = 0;
   if (/https?:\/\//.test(issue.body)) points += 3;
-  if (issue.body.includes("```")) points += 4;
+  if (hasRealCodeFence(issue.body)) points += 4;
   if (hasAny(issue.body, ["screenshot", "image", "recording", "attachment", "evidence"])) points += 3;
   if (hasAny(issue.body, ["log", "trace", "error", "exception", "console"])) points += 3;
   if (hasAny(issue.body, ["verified", "confirmed", "source", "reported", "unknown"])) points += 2;
+  if (hasConcreteIdentifier(issue.body) && hasUseCase(issue.body)) points += 4;
+  if (/^\s*\d+\.\s+/m.test(issue.body) && hasAny(issue.body, ["version", "environment", "platform", "build"])) points += 3;
+  if (hasAny(issue.body, ["saw it in", "from ", "within "]) && hasConcreteIdentifier(issue.body)) points += 3;
+  if (hasMaintenanceTask(issue) && hasAny(issue.body, ["should", "fixing", "current", "currently", "instead", "previous", "typo"])) points += 3;
+  if (hasExternalReferenceEvidence(issue.body)) points += 4;
   if (points < 5) notes.push("warn:issue has little explicit evidence");
   return { name: "evidence", score: clamp(points, 0, 15), maximum: 15, notes };
 }
@@ -337,6 +357,10 @@ function scoreScope(issue: ScoredIssue): DimensionScore {
   if (wordCount(issue.body) > 900) {
     points -= 3;
     notes.push("warn:body is large enough to risk mixed scope");
+  }
+  if (hasAny(issue.body, ["thinking out loud", "not saying", "curious how", "thought / idea"])) {
+    points -= 5;
+    notes.push("warn:issue is framed as exploratory discussion instead of a concrete maintainer task");
   }
   if ((issue.body.match(/\n\s*[-*]\s+/g) ?? []).length > 18) {
     points -= 2;
@@ -353,6 +377,12 @@ function scoreTemplateFit(issue: ScoredIssue): DimensionScore {
   let points = Math.min((issue.body.match(/^#{2,6}\s+/gm) ?? []).length * 2, 6);
   if (hasAny(issue.body, ["missing information", "unknown", "assumptions"])) points += 2;
   if (hasAny(issue.body, ["acceptance criteria", "expected behavior", "reproduction"])) points += 2;
+  if (points === 0 && hasMaintainerAction(issue) && hasConcreteIdentifier(`${issue.title}\n${issue.body}`) && hasUseCase(issue.body)) {
+    points = 4;
+  }
+  if (points === 0 && hasMaintenanceTask(issue)) {
+    points = 4;
+  }
   const placeholders = templatePlaceholderCounts(issue.body);
   const notes = points >= 6 ? [] : ["warn:issue may not map cleanly to a maintainer template"];
   if (placeholders.strong >= 2) {
@@ -450,7 +480,7 @@ function issueIdentifier(issue: ScoredIssue): string {
 function gradeFor(total: number, maximum: number): IssueScore["grade"] {
   const percent = maximum === 0 ? 0 : total / maximum;
   if (percent >= 0.9) return "excellent";
-  if (percent >= 0.75) return "usable";
+  if (percent >= 0.66) return "usable";
   if (percent >= 0.55) return "weak";
   return "bad";
 }
@@ -503,6 +533,95 @@ function templatePlaceholderCounts(value: string): { strong: number; blank: numb
 function hasAny(value: string, terms: string[]): boolean {
   const normalized = value.toLowerCase();
   return terms.some((term) => normalized.includes(term.toLowerCase()));
+}
+
+function hasMaintainerAction(issue: ScoredIssue): boolean {
+  return issue.labels.some((label) => label.toLowerCase() === "enhancement")
+    || hasAny(`${issue.title}\n${issue.body}`, [
+      "add ",
+      "expose ",
+      "feature request",
+      "provide ",
+      "support ",
+      "wrap ",
+    ]);
+}
+
+function hasMaintenanceTask(issue: ScoredIssue): boolean {
+  const text = `${issue.title}\n${issue.body}`;
+  return issue.labels.some((label) => hasAny(label, ["tech-debt", "documentation", "docs"]))
+    || (hasAny(text, ["readme", "docs", "documentation", "typo", "spelling"]) && hasAny(text, ["should", "fix", "correct", "rename", "typo"]))
+    || (hasAny(text, ["refactor", "reference", "rename"]) && hasConcreteIdentifier(text))
+    || (hasAny(text, ["sha pin", "pin ", "dependency", "dependabot", "installer", "sdk installer"]) && wordCount(text) >= 20)
+    || (hasAny(text, ["specification", "web platform", "standards", "integration"]) && hasExternalReferenceEvidence(text));
+}
+
+function hasExternalReferenceEvidence(value: string): boolean {
+  return /https?:\/\/[^\s)]+/.test(value) && hasAny(value, ["pull", "pr", "spec", "test", "wpt", "github.com", "marketplace"]);
+}
+
+function hasUseCase(value: string): boolean {
+  return hasAny(value, [
+    "because",
+    "can ",
+    "devs",
+    "easier",
+    "help",
+    "modders",
+    "requires",
+    "so ",
+    "so that",
+    "to be able",
+    "without",
+    "would ",
+  ]);
+}
+
+function hasMeaningfulUseCase(value: string): boolean {
+  if (hasAny(value, ["obvious", "_no response_", "n/a"])) return false;
+  return hasUseCase(value);
+}
+
+function hasConcreteIdentifier(value: string): boolean {
+  return /`[^`]{3,}`/.test(value)
+    || /\b[A-Z][A-Za-z0-9_]*(?:\.[A-Z][A-Za-z0-9_]*)+\b/.test(value)
+    || /\b[A-Z][A-Za-z0-9_]*(?:App|API|Entity|Manager|Pass|View|Loader|Storage|Time|NPC)s?\b/.test(value)
+    || /\b[A-Z][A-Za-z0-9_]*\(/.test(value);
+}
+
+function hasRealCodeFence(value: string): boolean {
+  return /```[\s\S]*?```/.test(value) && !hasAny(value, ["// your code here", "please fill in each section"]);
+}
+
+function hasObservedOutcome(value: string): boolean {
+  return hasAny(value, [
+    "crashes",
+    "does not",
+    "don't",
+    "error",
+    "fails",
+    "is no longer",
+    "missing",
+    "not always present",
+    "no longer present",
+    "throws",
+  ]);
+}
+
+function hasExpectedOutcome(value: string): boolean {
+  return hasAny(value, [
+    "expect ",
+    "expected",
+    "should",
+    "supposed to",
+  ]);
+}
+
+function hasReproductionDetails(value: string): boolean {
+  const lower = value.toLowerCase();
+  if (/^\s*\d+\.\s+/m.test(value)) return true;
+  if (/(steps|scenario|to reproduce|repro steps|reproduction steps)/i.test(value) && !lower.includes("optional if provided reproduction")) return true;
+  return false;
 }
 
 function wordCount(value: string): number {

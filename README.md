@@ -140,6 +140,46 @@ The bridge is intentionally repo-local. If mobile selects a different repository
 
 Low-scoring drafts are sent back through Codex with targeted feedback before creation.
 
+## Issue Scoring Action
+
+Repos can install the deterministic issue scorer without running Codex by adding this workflow:
+
+```yaml
+name: Score issues
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: ifBars/ghi@v1
+        with:
+          low-score-threshold: "6.6"
+          comment-on-low-score: "true"
+          apply-labels: "true"
+```
+
+The action scores the issue body on a `0.0`-`10.0` scale, adds labels such as `ghi-score/7.x` and `ghi-quality/usable`, and updates one guidance comment on low-scoring issues. It only uses the deterministic scorer in this repository; it does not call Codex, OpenAI APIs, or the full `ghi` issue-generation flow.
+
+Useful inputs:
+
+| Input | Default | Purpose |
+| --- | --- | --- |
+| `low-score-threshold` | `6.6` | Comment/fail threshold on the `0.0`-`10.0` scale. |
+| `comment-on-low-score` | `true` | Add or update a guidance comment for low-scoring issues. |
+| `apply-labels` | `true` | Add score and grade labels. |
+| `score-label-prefix` | `ghi-score/` | Prefix for bucket labels like `ghi-score/7.x`. |
+| `grade-label-prefix` | `ghi-quality/` | Prefix for labels like `ghi-quality/usable`. |
+| `ignore-maintainer-authored` | `true` | Avoid commenting on low-scoring issues opened by owners, members, or collaborators. |
+| `fail-on-low-score` | `false` | Fail the workflow when an issue is below threshold. |
+
 ## Safety Defaults
 
 - Reads the current repository conservatively by default.
