@@ -1,16 +1,40 @@
 {
-  "name": "ghi",
+  "name": "@ifbars/ghi",
   "version": "0.1.0",
-  "private": true,
+  "description": "AI-native GitHub issue intake CLI for developers.",
+  "license": "MIT",
+  "author": "ifBars",
+  "homepage": "https://github.com/ifBars/ghi#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ifBars/ghi.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/ifBars/ghi/issues"
+  },
   "type": "module",
   "bin": {
     "ghi": "./dist/cli.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "package.json"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "bun run clean && tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "test": "bun test src/close.test.ts src/codexClosureGenerator.test.ts src/codexIssueGenerator.test.ts src/config.test.ts src/dedupe.test.ts src/doctor.test.ts src/githubCli.test.ts src/jobs.test.ts src/main.test.ts src/metadata.test.ts src/sources.test.ts src/templates.test.ts",
     "smoke:node": "bun run build && node dist/smoke/mobileBridge.js",
+    "prepack": "bun run build",
     "dev": "bun run src/cli.ts"
   },
   "dependencies": {

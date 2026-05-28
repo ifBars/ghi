@@ -102,3 +102,5 @@ Before pushing a public repo:
 3. Confirm generated output is ignored.
 4. Run `bun run check`, `bun run test`, and the CLI smoke test.
 5. Confirm the remote points at the intended public repository.
+
+CLI releases publish `packages/cli` as `@ifbars/ghi`. Keep the package installable with a `ghi` bin, run `npm pack --dry-run` from `packages/cli` before release changes, and do not mark the package private.

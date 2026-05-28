@@ -47,6 +47,28 @@ skills/ghi        Codex skill for agents using the local ghi CLI
 - A working local Codex session for `@openai/codex-sdk`
 - Expo Go for the mobile app
 
+## Install
+
+Install the CLI globally so `ghi` is available on PATH:
+
+```bash
+npm install -g @ifbars/ghi
+```
+
+or:
+
+```bash
+bun install -g @ifbars/ghi
+```
+
+You can also install directly from a GitHub release tarball:
+
+```bash
+npm install -g https://github.com/ifBars/ghi/releases/download/v0.1.0/ifbars-ghi-0.1.0.tgz
+```
+
+Then run `ghi` from inside a GitHub-backed repository.
+
 ## Run Locally
 
 ```bash
@@ -63,7 +85,16 @@ cd packages/cli
 bun link
 ```
 
-Then run `ghi` from inside a GitHub-backed repository.
+## Release
+
+CLI releases are published as the npm package `@ifbars/ghi`, which installs the `ghi` binary.
+
+Release flow:
+
+1. Bump `packages/cli/package.json`.
+2. Commit the version change.
+3. Push a tag like `v0.1.1`.
+4. The release workflow builds, tests, packs, creates a GitHub release tarball, and publishes to npm when `NPM_TOKEN` is configured.
 
 ## CLI Usage
 
