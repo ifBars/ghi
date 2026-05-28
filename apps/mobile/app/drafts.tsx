@@ -1,10 +1,12 @@
 import * as Clipboard from "expo-clipboard";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, PlatformColor, Pressable, ScrollView, Share, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
+import { Button, Card, EmptyState, Pill, Screen, useTheme } from "@/components/ui";
 import { deleteDraft, formatHandoff, loadDrafts, type MobileDraft } from "@/lib/drafts";
 
 export default function DraftsScreen() {
+  const theme = useTheme();
   const [drafts, setDrafts] = useState<MobileDraft[]>([]);
 
   const refresh = useCallback(async () => {
@@ -17,10 +19,6 @@ export default function DraftsScreen() {
     }, [refresh]),
   );
 
-  async function handleShare(draft: MobileDraft) {
-    await Share.share({ message: formatHandoff(draft), title: draft.title });
-  }
-
   async function handleCopy(draft: MobileDraft) {
     await Clipboard.setStringAsync(formatHandoff(draft));
     Alert.alert("Copied", "The CLI handoff is on your clipboard.");
@@ -32,96 +30,58 @@ export default function DraftsScreen() {
   }
 
   return (
-    <ScrollView contentInsetAdjustmentBehavior="automatic" contentContainerStyle={{ padding: 20, gap: 14 }}>
+    <Screen>
+    <ScrollView
+      contentInsetAdjustmentBehavior="automatic"
+      contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 36 }}
+      style={{ backgroundColor: theme.background }}
+    >
+      <Text selectable style={{ color: theme.text, fontSize: 38, fontWeight: "900" }}>
+        Drafts
+      </Text>
+
       {drafts.length === 0 ? (
-        <View
-          style={{
-            backgroundColor: PlatformColor("secondarySystemGroupedBackground"),
-            borderRadius: 18,
-            borderCurve: "continuous",
-            padding: 18,
-            gap: 8,
-          }}
-        >
-          <Text selectable style={{ fontSize: 18, fontWeight: "800", color: PlatformColor("label") }}>
-            No drafts yet
-          </Text>
-          <Text selectable style={{ color: PlatformColor("secondaryLabel"), lineHeight: 20 }}>
-            Captures saved from the main screen will appear here for handoff into the CLI workflow.
-          </Text>
-        </View>
+        <EmptyState
+          title="No drafts yet"
+          message="Saved captures appear here for CLI handoff when you want local Codex to polish the final issue."
+          action={<Button title="Create Capture" onPress={() => router.navigate("/create")} filled />}
+        />
       ) : (
         drafts.map((draft) => (
-          <View
-            key={draft.id}
-            style={{
-              backgroundColor: PlatformColor("secondarySystemGroupedBackground"),
-              borderRadius: 18,
-              borderCurve: "continuous",
-              padding: 16,
-              gap: 12,
-            }}
-          >
-            <View style={{ gap: 5 }}>
-              <Text selectable style={{ fontSize: 17, fontWeight: "800", color: PlatformColor("label") }}>
-                {draft.title}
-              </Text>
-              <Text selectable style={{ color: PlatformColor("secondaryLabel") }}>
-                {draft.repository || "No repository"} | {draft.kind}
+          <Card key={draft.id} gap={12}>
+            <View style={{ gap: 6 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Text selectable style={{ fontSize: 17, fontWeight: "900", color: theme.text, flex: 1 }}>
+                  {draft.title}
+                </Text>
+                <Pill label={draft.kind} active />
+              </View>
+              <Text selectable style={{ color: theme.secondaryText }}>
+                {draft.repository || "No repository"}
               </Text>
             </View>
-            <Text selectable numberOfLines={5} style={{ color: PlatformColor("secondaryLabel"), lineHeight: 20 }}>
+            <Text selectable numberOfLines={5} style={{ color: theme.secondaryText, lineHeight: 20 }}>
               {draft.body}
             </Text>
             <View style={{ flexDirection: "row", gap: 10, flexWrap: "wrap" }}>
-              <Pressable
-                onPress={() => void handleShare(draft)}
-                style={{
-                  flex: 1,
-                  alignItems: "center",
-                  borderRadius: 12,
-                  borderCurve: "continuous",
-                  paddingVertical: 11,
-                  backgroundColor: PlatformColor("systemBlue"),
-                }}
-              >
-                <Text style={{ color: "white", fontWeight: "800" }}>Share</Text>
-              </Pressable>
-              <Pressable
-                onPress={() => void handleCopy(draft)}
-                style={{
-                  flex: 1,
-                  alignItems: "center",
-                  borderRadius: 12,
-                  borderCurve: "continuous",
-                  paddingVertical: 11,
-                  backgroundColor: PlatformColor("tertiarySystemGroupedBackground"),
-                }}
-              >
-                <Text style={{ color: PlatformColor("label"), fontWeight: "800" }}>Copy</Text>
-              </Pressable>
-              <Pressable
+              <View style={{ flex: 1 }}>
+                <Button title="Copy for CLI" onPress={() => void handleCopy(draft)} filled />
+              </View>
+              <Button
+                title="Delete"
+                danger
                 onPress={() =>
                   Alert.alert("Delete draft?", draft.title, [
                     { text: "Cancel", style: "cancel" },
                     { text: "Delete", style: "destructive", onPress: () => void handleDelete(draft) },
                   ])
                 }
-                style={{
-                  alignItems: "center",
-                  borderRadius: 12,
-                  borderCurve: "continuous",
-                  paddingHorizontal: 16,
-                  paddingVertical: 11,
-                  backgroundColor: PlatformColor("tertiarySystemGroupedBackground"),
-                }}
-              >
-                <Text style={{ color: PlatformColor("systemRed"), fontWeight: "800" }}>Delete</Text>
-              </Pressable>
+              />
             </View>
-          </View>
+          </Card>
         ))
       )}
     </ScrollView>
+    </Screen>
   );
 }

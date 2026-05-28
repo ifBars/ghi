@@ -9,7 +9,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "test": "bun test src/codexIssueGenerator.test.ts src/config.test.ts src/dedupe.test.ts src/doctor.test.ts src/githubCli.test.ts src/jobs.test.ts src/main.test.ts src/metadata.test.ts src/sources.test.ts src/templates.test.ts",
+    "test": "bun test src/close.test.ts src/codexClosureGenerator.test.ts src/codexIssueGenerator.test.ts src/config.test.ts src/dedupe.test.ts src/doctor.test.ts src/githubCli.test.ts src/jobs.test.ts src/main.test.ts src/metadata.test.ts src/sources.test.ts src/templates.test.ts",
+    "smoke:node": "bun run build && node dist/smoke/mobileBridge.js",
     "dev": "bun run src/cli.ts"
   },
   "dependencies": {
@@ -17,6 +18,7 @@
     "commander": "^14.0.2",
     "execa": "^9.6.0",
     "ignore": "^7.0.5",
+    "qrcode-terminal": "^0.12.0",
     "zod": "^4.1.12"
   },
   "devDependencies": {

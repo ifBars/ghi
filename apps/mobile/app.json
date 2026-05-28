@@ -2,12 +2,21 @@
   "expo": {
     "name": "ghi",
     "slug": "ghi",
+    "scheme": "ghi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ifbars.ghi",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Allow ghi to use the camera to scan desktop CLI pairing QR codes.",
+        "LSApplicationQueriesSchemes": [
+          "github"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,7 +31,20 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
-    ]
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow ghi to use the camera to scan desktop CLI pairing QR codes."
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c9b31a55-2d14-43e8-bc28-663446bd4ced"
+      }
+    }
   }
 }

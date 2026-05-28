@@ -1,149 +1,201 @@
 # ghi
 
-`ghi` is AI-native GitHub issue intake.
+`ghi` is AI-native GitHub issue intake for developers.
 
-It turns rough engineering signals into clean, triage-ready GitHub issues with almost no ceremony.
+It turns rough bug reports, feature ideas, screenshots, logs, and mobile notes into polished GitHub issues and closure comments using local repo context.
 
 > CodeRabbit for opening and triaging issues, not reviewing PRs.
 
-## Surfaces
+## What It Does
 
-- **Developer CLI**: local-first, Codex-powered issue generation from inside a git repo.
-- **iOS capture app**: Expo app for away-from-desk bug, idea, screenshot, Discord, and voice-note capture.
-- **Shared intake model**: stable handoff shape for future hosted sync, GitHub App bot mode, and team workflows.
+- Creates full GitHub issues from terse notes like `ghi "inventory dupes after reconnect"`.
+- Uses Codex locally to inspect the repository and follow project conventions.
+- Applies existing issue templates when available.
+- Creates an `ai-draft` label when needed.
+- Adds hidden `ghi` metadata without putting the rough original input in the issue body.
+- Searches after creation for possible duplicates or related issues and comments when confidence is high enough.
+- Closes issues with full context closure comments from short reason notes.
+- Runs long issue generation jobs in the background.
+- Pairs the mobile app with a desktop repo through a local QR-code bridge.
 
-## CLI
+## Product Shape
 
-```bash
-ghi "inventory dupes after reconnect"
-```
+`ghi` is intentionally not Jira, Linear, or project-management ceremony. The goal is low-friction operational memory for developers:
 
-The CLI uses the user's local Codex session for repo-aware issue drafting, then creates the issue through local GitHub auth. Issues are created as normal GitHub issues with an `ai-draft` label and hidden `ghi` metadata. Follow-up comments are reserved for advisory duplicate or related-issue findings.
+- capture quickly
+- let the local agent inspect the repo
+- create a real GitHub issue
+- keep the final issue useful for maintainers
 
-## iOS App
+The MVP is local-first. The desktop CLI owns Codex and GitHub mutations. The mobile app is a lightweight GitHub-aware capture client that can browse repos/issues and hand new captures to the desktop CLI.
 
-The Expo app is a fast mobile capture surface:
+## Workspace
 
-- select bug, feature, idea, or task
-- capture repository, rough report, and extra context
-- preview the structured issue handoff
-- save to a local draft inbox
-- copy or share the handoff back to the desktop workflow
-
-For the current marketable MVP, mobile is intentionally capture/handoff-first. It does not run Codex on iOS. Direct mobile Codex generation and bot-authored GitHub issue creation require a hosted layer or remote agent bridge and remain the next product tier.
-
-## Principles
-
-- Local-first by default.
-- Use Codex SDK as the agentic repo reasoning harness.
-- Use GitHub CLI auth for issue creation in the MVP.
-- Create `ai-draft` automatically when missing.
-- Do not include the original rough input in the issue body.
-- Keep AI provenance out of visible body copy; use labels and hidden metadata.
-- Post duplicate or related issue findings as comments after creation.
-
-## Demo
-
-```bash
-bun install
-bun run test
-bun run check
-bun run build
-
-# Local preflight
-bun run dev:cli -- doctor
-
-# CLI dry run through Codex
-bun run dev:cli -- --dry-run "inventory dupes after reconnect"
-
-# Mobile app for Expo Go
-bun run dev:mobile
-```
-
-## Usage
-
-Run from inside a GitHub-backed git repository:
-
-```bash
-ghi "inventory dupes after reconnect"
-```
-
-For local development without creating an issue:
-
-```bash
-bun run dev:cli -- --dry-run "inventory dupes after reconnect"
-```
-
-Review before creating:
-
-```bash
-ghi --review "inventory dupes after reconnect"
-```
-
-Force immediate creation:
-
-```bash
-ghi --now "inventory dupes after reconnect"
-```
-
-Create from an external report:
-
-```bash
-ghi --url "https://www.nexusmods.com/example/mods/123?tab=bugs" \
-  --quote "Reporter says the game crashes after enabling the optional patch" \
-  --screenshot "C:\\path\\to\\captured-report.png" \
-  --explore \
-  "diagnose and file the Nexus Mods bug report"
-```
-
-Use async mode when exploration may take a while:
-
-```bash
-ghi --async --url "https://www.nexusmods.com/example/mods/123?tab=bugs" \
-  --quote "Crash after install, happens before main menu" \
-  --explore \
-  "turn this external report into a repo issue"
-
-ghi jobs
-ghi job <id>
-```
-
-Preflight local requirements:
-
-```bash
-ghi doctor
-```
-
-Local install while developing:
-
-```bash
-bun run build
-cd packages/cli
-bun link
+```text
+packages/cli      Codex + GitHub CLI workflow
+packages/shared   Shared intake primitives
+apps/mobile       Expo iOS app for GitHub browsing and mobile capture
+docs              Product notes, plans, and demo material
 ```
 
 ## Requirements
 
 - Bun
 - Git
-- GitHub CLI authenticated for the target repo
-- Codex CLI/session available to `@openai/codex-sdk`
-- Expo Go for iOS mobile preview
+- GitHub CLI authenticated with access to the target repo
+- A working local Codex session for `@openai/codex-sdk`
+- Expo Go for mobile development
 
-## Current MVP behavior
+## Install For Development
 
-`ghi` creates issues as the authenticated GitHub user. It ensures the `ai-draft` label when permissions allow, uses an existing triage label when present, and only applies inferred labels that already exist in the repo. After issue creation, it searches existing issues and posts an advisory possible duplicate/related comment when confidence is high enough.
-
-Mobile drafts are not repo-aware until they are handed off to the desktop CLI. This is deliberate: the repo-aware Codex step runs where the repository, GitHub CLI auth, and Codex SDK session exist.
-
-External report intake accepts `--url`, `--quote`, and `--explore`. The CLI performs a best-effort URL text prefetch and passes the source bundle into Codex. With `--explore`, Codex is instructed to use available browser, Playwright, web, or future tool adapters when the runtime supports them, especially for visual reports and third-party issue pages.
-
-Visual evidence can be attached with `--screenshot <path>`. This is designed for agent workflows that first capture an image with browser, Playwright, Playwright interactive, OpenClaw-style site agents, or a user-provided screenshot, then hand that artifact to `ghi`.
-
-## Workspace
-
-```text
-packages/cli      Local-first Codex + GitHub CLI workflow
-packages/shared   Intake types and handoff formatting
-apps/mobile       Expo iOS capture app
+```bash
+bun install
+bun run check
+bun run test
+bun run build
 ```
+
+Link the CLI locally:
+
+```bash
+cd packages/cli
+bun link
+```
+
+Then run `ghi` from inside a GitHub-backed repository.
+
+## CLI Usage
+
+Create an issue from rough text:
+
+```bash
+ghi "memory leak in websocket reconnect"
+ghi --now "inventory dupes after reconnect"
+ghi --review "project cards are awkward after opening on mobile"
+```
+
+Dry-run without creating a GitHub issue:
+
+```bash
+ghi --dry-run "settings screen does not preserve selected repo"
+```
+
+Use explicit source context:
+
+```bash
+ghi \
+  --url "https://example.com/external-report" \
+  --quote "Reporter says it crashes after enabling the optional patch" \
+  --screenshot "C:\path\to\screenshot.png" \
+  --explore \
+  "turn this external report into a repo issue"
+```
+
+Run issue generation in the background:
+
+```bash
+ghi --async --explore "investigate recurring terminal build error"
+ghi jobs
+ghi job <id>
+```
+
+Close an issue with a generated closure comment:
+
+```bash
+ghi close 42 "fixed by reconnect reconciliation patch"
+ghi close 42 --duplicate-of 17 "same root cause and repro path"
+ghi close 42 --dry-run "no longer applicable after mobile card redesign"
+```
+
+Check local readiness:
+
+```bash
+ghi doctor
+```
+
+## Mobile App
+
+The Expo app provides a GitHub-style mobile workflow:
+
+- connect a GitHub token locally
+- view repositories and favorite repos
+- browse open/closed issues
+- open issue detail pages with rendered Markdown
+- select a repo per screen instead of relying on global shared repo state
+- capture a bug, feature, idea, or task
+- attach screenshots or files as evidence
+- save local drafts
+- send captures to the desktop CLI bridge
+
+Start the app:
+
+```bash
+bun run dev:mobile
+```
+
+The app targets Expo SDK 54 so it can run in Expo Go.
+
+## Desktop Bridge
+
+Mobile does not run Codex on iOS. For repo-aware generation, start a local bridge from the desktop repository that should receive the issue:
+
+```bash
+ghi mobile serve
+```
+
+The bridge prints:
+
+- local URL
+- pairing token
+- pairing URL
+- terminal QR code
+
+In the mobile app, go to Settings and scan the QR code. Once paired, Capture sends the report and attachments to the desktop bridge. The bridge immediately returns a job id, saves uploaded evidence locally, and runs the actual Codex/GitHub workflow in the background.
+
+The bridge is intentionally repo-local. If mobile selects a different repo than the desktop bridge is serving, the request is rejected instead of guessing a local checkout.
+
+## Issue Creation Behavior
+
+`ghi` creates issues as the currently authenticated GitHub CLI user. It does not create bot-authored issues in the local-first MVP.
+
+Creation flow:
+
+1. Read git metadata and repository templates.
+2. Let Codex inspect the repo conservatively, with deeper exploration when requested.
+3. Generate a structured issue payload.
+4. Ensure `ai-draft` exists when permissions allow.
+5. Create the issue with labels that exist in the repo.
+6. Search for possible duplicates or related issues.
+7. Post advisory relationship comments only when confidence is high enough.
+
+The issue body should contain the final polished issue, not the rough prompt.
+
+## Safety Defaults
+
+- Conservative repo reading by default.
+- Follow `.gitignore`.
+- Do not read `.env` files.
+- Do not expose tokens in issue bodies, logs, or docs.
+- Prefer existing repo labels/templates/conventions over invented structure.
+- Store visible AI provenance as labels/metadata, not body prose.
+
+## Scripts
+
+```bash
+bun run check       # shared + CLI + mobile TypeScript
+bun run test        # CLI test suite
+bun run build       # build CLI
+bun run smoke:node  # Node runtime smoke for the mobile bridge
+bun run dev:cli     # run CLI from source
+bun run dev:mobile  # start Expo
+```
+
+## Status
+
+This is an early local-first MVP. The strongest next steps are:
+
+- richer desktop job history surfaced on mobile
+- hosted sync for teams
+- GitHub App bot mode
+- ownership/routing suggestions
+- deeper issue clustering across repos and time

@@ -4,8 +4,34 @@ coverage/
 .expo/
 .expo-export-check/
 .claude/
+.codex/
+.agents/
+.vscode/
+.idea/
+.turbo/
+.cache/
+.DS_Store
+Thumbs.db
+.bun-debug.log*
+.npmrc
 .env
 .env.*
 !.env.example
 *.log
 *.tsbuildinfo
+*.local
+*.tmp
+*.temp
+*.bak
+
+# Expo / React Native generated output
+apps/mobile/.expo/
+apps/mobile/.expo-export-check/
+apps/mobile/dist/
+apps/mobile/web-build/
+apps/mobile/android/
+apps/mobile/ios/
+
+# CLI generated output
+packages/cli/dist/
+packages/shared/dist/

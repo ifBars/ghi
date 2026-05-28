@@ -10,6 +10,7 @@
     "test": "bun run --cwd packages/cli test",
     "check": "bun run --cwd packages/shared check && bun run --cwd packages/cli check && bun run --cwd apps/mobile check",
     "build": "bun run --cwd packages/cli build",
+    "smoke:node": "bun run --cwd packages/cli smoke:node",
     "dev:cli": "bun run --cwd packages/cli dev",
     "dev:mobile": "bun run --cwd apps/mobile start",
     "check:mobile": "bun run --cwd apps/mobile check"

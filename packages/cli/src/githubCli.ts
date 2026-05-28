@@ -1,5 +1,14 @@
 import { execa } from "execa";
-import type { CreateIssueOptions, CreatedIssue, ExistingIssue } from "./domain.js";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import type {
+  ClosureStateReason,
+  CreateIssueOptions,
+  CreatedIssue,
+  ExistingIssue,
+  IssueView,
+} from "./domain.js";
 
 export type CommandResult = {
   stdout: string;
@@ -78,15 +87,23 @@ export class GithubCli {
   }
 
   async createIssue(options: CreateIssueOptions): Promise<CreatedIssue> {
-    const args = ["issue", "create", "--title", options.title, "--body", options.body];
-    for (const label of options.labels) {
-      args.push("--label", label);
-    }
+    const tempDir = await mkdtemp(join(tmpdir(), "ghi-issue-"));
+    const bodyFile = join(tempDir, "body.md");
 
-    const result = await this.runner("gh", args, this.cwd);
-    const url = result.stdout.trim();
-    const number = parseIssueNumber(url);
-    return { url, number };
+    try {
+      await writeFile(bodyFile, options.body, "utf8");
+      const args = ["issue", "create", "--title", options.title, "--body-file", bodyFile];
+      for (const label of options.labels) {
+        args.push("--label", label);
+      }
+
+      const result = await this.runner("gh", args, this.cwd);
+      const url = result.stdout.trim();
+      const number = parseIssueNumber(url);
+      return { url, number };
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   }
 
   async listIssuesForSearch(query: string, limit = 10): Promise<ExistingIssue[]> {
@@ -109,8 +126,40 @@ export class GithubCli {
     return JSON.parse(result.stdout || "[]") as ExistingIssue[];
   }
 
+  async viewIssue(issue: string): Promise<IssueView> {
+    const result = await this.runner(
+      "gh",
+      [
+        "issue",
+        "view",
+        issue,
+        "--comments",
+        "--json",
+        "number,title,state,url,body,labels,comments,stateReason",
+      ],
+      this.cwd,
+    );
+    return JSON.parse(result.stdout) as IssueView;
+  }
+
   async comment(issueNumber: number, body: string): Promise<void> {
     await this.runner("gh", ["issue", "comment", String(issueNumber), "--body", body], this.cwd);
+  }
+
+  async closeIssue(options: {
+    issue: string;
+    comment: string;
+    stateReason: ClosureStateReason;
+    duplicateOf?: string;
+  }): Promise<void> {
+    const args = ["issue", "close", options.issue, "--comment", options.comment];
+    if (options.duplicateOf) {
+      args.push("--duplicate-of", options.duplicateOf);
+    } else {
+      args.push("--reason", options.stateReason);
+    }
+
+    await this.runner("gh", args, this.cwd);
   }
 }
 

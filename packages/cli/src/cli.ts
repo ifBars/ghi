@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { writeSync } from "node:fs";
+import { runCloseIssueFlow } from "./close.js";
 import { formatDoctorReport, runDoctor } from "./doctor.js";
 import { enqueueBackgroundJob, formatJobList, formatJobView, listJobs, loadJob, readJobLog, runWorkerJob } from "./jobs.js";
 import { extractCreatedIssueUrl, runCreateIssueFlow } from "./main.js";
+import { startMobileBridge } from "./mobileBridge.js";
 
 const program = new Command();
 
@@ -66,6 +68,46 @@ program
     const job = await loadJob(id);
     const log = await readJobLog(id);
     process.stdout.write(`${formatJobView(job, log)}\n`);
+  });
+
+program
+  .command("close")
+  .description("Close a GitHub issue with a Codex-generated closure comment.")
+  .argument("<issue>", "issue number or URL to close")
+  .argument("[reason...]", "short low-context closure reason notes")
+  .option("--duplicate-of <issue>", "mark as duplicate of another issue number or URL")
+  .option("--state-reason <reason>", "GitHub close reason: completed, not-planned, or duplicate")
+  .option("--review", "review the generated closure comment before closing")
+  .option("--dry-run", "generate and print the closure payload without closing the issue")
+  .action(async (issue: string, reasonParts: string[], options: CloseCommandOptions) => {
+    await runCloseIssueFlow({
+      cwd: process.cwd(),
+      issue,
+      reasonNotes: reasonParts,
+      duplicateOf: options.duplicateOf,
+      stateReason: options.stateReason,
+      review: options.review,
+      dryRun: options.dryRun,
+    });
+  });
+
+const mobile = program
+  .command("mobile")
+  .description("Pair and serve local desktop CLI workflows to the mobile app.");
+
+mobile
+  .command("serve")
+  .description("Start a token-protected local bridge for mobile captures.")
+  .option("--host <host>", "host/IP to bind and advertise")
+  .option("--port <port>", "port to listen on", parsePort)
+  .option("--token <token>", "pairing token to require instead of generating one")
+  .action(async (options: MobileServeOptions) => {
+    await startMobileBridge({
+      cwd: process.cwd(),
+      host: options.host,
+      port: options.port,
+      token: options.token,
+    });
   });
 
 program
@@ -178,6 +220,19 @@ type CreateCommandOptions = {
   fetch?: boolean;
 };
 
+type CloseCommandOptions = {
+  duplicateOf?: string;
+  stateReason?: string;
+  review?: boolean;
+  dryRun?: boolean;
+};
+
+type MobileServeOptions = {
+  host?: string;
+  port?: number;
+  token?: string;
+};
+
 function collectForwardedArgs(options: { now?: boolean; dryRun?: boolean }): string[] {
   return [
     ...(options.now ? ["--now"] : []),
@@ -191,4 +246,12 @@ function printQueuedJob(id: string): void {
 
 function collectOption(value: string, previous: string[] = []): string[] {
   return [...previous, value];
+}
+
+function parsePort(value: string): number {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    throw new Error(`invalid port: ${value}`);
+  }
+  return port;
 }

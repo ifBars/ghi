@@ -75,6 +75,26 @@ export type ExistingIssue = {
   body?: string;
 };
 
+export const closureStateReasonSchema = z.enum(["completed", "not planned", "duplicate"]);
+
+export type ClosureStateReason = z.infer<typeof closureStateReasonSchema>;
+
+export const closurePayloadSchema = z.object({
+  comment: z.string().min(20),
+  stateReason: closureStateReasonSchema,
+  confidence: z.number().min(0).max(1).default(0.5),
+  summary: z.array(z.string()).default([]),
+  followUps: z.array(z.string()).default([]),
+});
+
+export type ClosurePayload = z.infer<typeof closurePayloadSchema>;
+
+export type IssueView = ExistingIssue & {
+  labels?: Array<{ name: string }>;
+  comments?: Array<{ author?: { login?: string }; body?: string; createdAt?: string }>;
+  stateReason?: string | null;
+};
+
 export type RelationshipKind = "duplicate" | "related";
 
 export type IssueRelationship = {
