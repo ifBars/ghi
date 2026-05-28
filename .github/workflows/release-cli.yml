@@ -52,13 +52,69 @@ jobs:
         run: npm pack --pack-destination "$GITHUB_WORKSPACE"
         working-directory: packages/cli
 
+      - name: Generate release notes
+        run: |
+          set -euo pipefail
+
+          VERSION="$(node -p "require('./packages/cli/package.json').version")"
+          PREVIOUS_TAG="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
+          if [ -n "$PREVIOUS_TAG" ]; then
+            CHANGE_RANGE="${PREVIOUS_TAG}..${GITHUB_REF_NAME}"
+          else
+            CHANGE_RANGE="${GITHUB_REF_NAME}"
+          fi
+
+          {
+            echo "## ghi ${VERSION}"
+            echo
+            echo "ghi is an AI-native GitHub issue intake CLI for developers. It turns rough bug reports, feature ideas, screenshots, logs, and external reports into polished GitHub issues using local repo context."
+            echo
+            echo "## Install"
+            echo
+            echo '```bash'
+            echo "npm install -g @ifbars/ghi"
+            echo '```'
+            echo
+            echo "or:"
+            echo
+            echo '```bash'
+            echo "bun install -g @ifbars/ghi"
+            echo '```'
+            echo
+            echo "After installation, run \`ghi\` from inside a GitHub-backed repository."
+            echo
+            echo "## Highlights"
+            echo
+            echo "- Creates polished GitHub issues from terse engineering notes."
+            echo "- Uses local Codex and repository context for issue structure, templates, labels, and evidence."
+            echo "- Supports review, dry-run, immediate creation, and headless background jobs."
+            echo "- Adds \`ai-draft\` labels and hidden metadata without dumping the rough prompt into the issue body."
+            echo "- Includes issue closure workflows with generated closure comments and duplicate handling."
+            echo "- Supports mobile capture handoff through the local desktop bridge."
+            echo
+            echo "## Changes"
+            echo
+            git log --format="- %s (%h)" "$CHANGE_RANGE" | sed 's/%/%%/g'
+            echo
+            echo "## Requirements"
+            echo
+            echo "- Node.js 20+"
+            echo "- Git"
+            echo "- GitHub CLI authenticated for the target repository"
+            echo "- A working local Codex session for \`@openai/codex-sdk\`"
+            echo
+            echo "## Assets"
+            echo
+            echo "The attached \`.tgz\` is the npm package artifact for this CLI release."
+          } > "$GITHUB_WORKSPACE/release-notes.md"
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "${GITHUB_REF_NAME}" \
             --title "${GITHUB_REF_NAME}" \
-            --notes "Install with: npm install -g @ifbars/ghi" \
+            --notes-file "$GITHUB_WORKSPACE/release-notes.md" \
             ./*.tgz
 
       - name: Publish to npm
