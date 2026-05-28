@@ -48,6 +48,13 @@ describe("GithubCli", () => {
     );
   });
 
+  test("returns null when no triage label candidates exist", async () => {
+    const { runner } = fakeRunner(['[{"name":"bug"},{"name":"enhancement"}]']);
+    const github = new GithubCli({ cwd: "/repo", runner });
+
+    await expect(github.selectTriageLabel(["needs-triage", "status: triage"])).resolves.toBeNull();
+  });
+
   test("creates issue with title body and labels", async () => {
     const { runner, calls } = fakeRunner(["https://github.com/o/r/issues/42"]);
     const github = new GithubCli({ cwd: "/repo", runner });
@@ -99,6 +106,28 @@ describe("GithubCli", () => {
     await github.comment(42, "Possible duplicate of #1");
 
     expect(calls[0]).toEqual(["gh", "issue", "comment", "42", "--body", "Possible duplicate of #1"]);
+  });
+
+  test("lists issues with search query and requested limit", async () => {
+    const { runner, calls } = fakeRunner(['[{"number":7,"title":"Existing","state":"OPEN","url":"u"}]']);
+    const github = new GithubCli({ cwd: "/repo", runner });
+
+    const issues = await github.listIssuesForSearch("Inventory reconnect in:title", 5);
+
+    expect(issues[0].number).toBe(7);
+    expect(calls[0]).toEqual([
+      "gh",
+      "issue",
+      "list",
+      "--state",
+      "all",
+      "--search",
+      "Inventory reconnect in:title",
+      "--limit",
+      "5",
+      "--json",
+      "number,title,state,url,body",
+    ]);
   });
 
   test("views issue with comments", async () => {
@@ -168,6 +197,10 @@ describe("GithubCli", () => {
 describe("parseIssueNumber", () => {
   test("parses issue URLs", () => {
     expect(parseIssueNumber("https://github.com/o/r/issues/123")).toBe(123);
+  });
+
+  test("parses issue URLs with trailing output", () => {
+    expect(parseIssueNumber("Created issue https://github.com/o/r/issues/123\n")).toBe(123);
   });
 
   test("returns null for non-issue output", () => {

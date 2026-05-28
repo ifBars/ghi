@@ -92,6 +92,30 @@ describe("runCloseIssueFlow", () => {
     expect(output.join("")).toContain("reconnect duplication case");
   });
 
+  test("uses requested state reason over generated payload state reason", async () => {
+    const { github, calls } = fakeGithub();
+
+    const result = await runCloseIssueFlow({
+      cwd: "/repo",
+      issue: "42",
+      reasonNotes: ["not planned"],
+      stateReason: "not-planned",
+    }, {
+      getGitContext: async () => git,
+      githubFactory: () => github,
+      closureGenerator: {
+        generate: async (input) => {
+          expect(input.requestedStateReason).toBe("not planned");
+          return payload;
+        },
+      },
+      write: () => undefined,
+    });
+
+    expect(result.payload.stateReason).toBe("not planned");
+    expect(calls).toEqual(["view:42", "close:42:not planned:"]);
+  });
+
   test("review can cancel closure", async () => {
     const { github, calls } = fakeGithub();
 

@@ -183,7 +183,7 @@ function writeResponse(response: ServerResponse, status: number, body: unknown):
   response.end(`${JSON.stringify(body)}\n`);
 }
 
-function normalizeRepo(value: string): string {
+export function normalizeRepo(value: string): string {
   return value.trim().toLowerCase().replace(/\.git$/, "");
 }
 
@@ -220,16 +220,16 @@ async function saveMobileAttachments(attachments: MobileBridgeAttachment[]): Pro
   };
 }
 
-function sanitizeFileName(value: string): string {
+export function sanitizeFileName(value: string): string {
   return value.replace(/[<>:"/\\|?*\x00-\x1F]/g, "-").replace(/\s+/g, " ").trim().slice(0, 96);
 }
 
-function stripDataUrlPrefix(value: string): string {
+export function stripDataUrlPrefix(value: string): string {
   const comma = value.indexOf(",");
   return value.startsWith("data:") && comma >= 0 ? value.slice(comma + 1) : value;
 }
 
-function extensionForMime(mimeType?: string): string {
+export function extensionForMime(mimeType?: string): string {
   if (!mimeType) {
     return ".bin";
   }
@@ -253,7 +253,7 @@ function extensionForMime(mimeType?: string): string {
   return extname(extension) ? extension : ".bin";
 }
 
-function formatBridgeError(error: unknown): string {
+export function formatBridgeError(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   if (message.includes("gh issue create") || message.includes("Command failed with exit code")) {
     return "Desktop issue creation failed. Check `ghi jobs` on the desktop for the full error.";

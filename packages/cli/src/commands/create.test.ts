@@ -85,6 +85,51 @@ describe("runCreateIssueFlow", () => {
     expect(comments[0]).toContain("Possibly related");
   });
 
+  test("continues without ai-draft label when label creation fails", async () => {
+    const output: string[] = [];
+    const calls: string[] = [];
+    const github: GithubClient = {
+      async listLabels() {
+        calls.push("list-labels");
+        return [{ name: "bug" }];
+      },
+      async ensureAiDraftLabel() {
+        calls.push("ensure-label");
+        throw new Error("label permission denied");
+      },
+      async selectTriageLabel() {
+        calls.push("select-triage");
+        return null;
+      },
+      async createIssue(options) {
+        calls.push(`create:${options.labels.join(",")}`);
+        return { number: null, url: "https://github.com/ifBars/ghi/issues/44" };
+      },
+      async listIssuesForSearch() {
+        throw new Error("should not search without issue number");
+      },
+      async comment() {
+        throw new Error("should not comment without issue number");
+      },
+    };
+
+    const result = await runCreateIssueFlow("rough report", {
+      cwd: "/repo",
+      now: true,
+    }, {
+      getGitContext: async () => git,
+      discoverIssueTemplates: async () => [],
+      issueGenerator: { generate: async () => ({ ...payload, labels: ["Bug", "bug", "missing"] }) },
+      collectSourceContexts: async () => [],
+      githubFactory: () => github,
+      write: (message) => output.push(message),
+    });
+
+    expect(result.createdIssue?.number).toBeNull();
+    expect(calls).toEqual(["ensure-label", "select-triage", "list-labels", "create:bug"]);
+    expect(output.join("")).toContain("could not ensure ai-draft label");
+  });
+
   test("dry-run skips GitHub mutation", async () => {
     const output: string[] = [];
 
@@ -157,6 +202,27 @@ describe("runCreateIssueFlow", () => {
         { kind: "quote", content: "quoted external report" },
       ],
     });
+  });
+
+  test("deduplicates explicit and inline URLs before source collection", async () => {
+    let collectedUrls: string[] = [];
+
+    await runCreateIssueFlow("report from https://example.com/bug", {
+      cwd: "/repo",
+      dryRun: true,
+      urls: [" https://example.com/bug ", "https://example.com/other"],
+    }, {
+      getGitContext: async () => git,
+      discoverIssueTemplates: async () => [],
+      collectSourceContexts: async (input) => {
+        collectedUrls = input.urls;
+        return [];
+      },
+      issueGenerator: { generate: async () => payload },
+      write: () => undefined,
+    });
+
+    expect(collectedUrls).toEqual(["https://example.com/bug", "https://example.com/other"]);
   });
 
   test("passes screenshot paths to issue generator", async () => {
