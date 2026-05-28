@@ -22,17 +22,17 @@ Bugs, feature ideas, Discord reports, terminal errors, screenshots, and maintain
 
 Coding agents can understand repo context, but teams still need a clean operational memory layer. GitHub issues are the durable artifact; `ghi` makes creating them feel as fast as sending a message.
 
-## MVP Demo
+## Demo
 
 ```bash
-bun run dev:cli -- doctor
-bun run dev:cli -- --dry-run "inventory dupes after reconnect"
+ghi doctor
+ghi --dry-run "inventory dupes after reconnect"
 bun run dev:mobile
 ```
 
-## Current Boundary
+## Product Boundary
 
-The CLI is the repo-aware creation surface. The iOS app is the capture/handoff surface. Hosted sync, GitHub App bot authorship, and direct mobile issue creation are the next tier after validating issue quality.
+The CLI is the repo-aware creation surface. The iOS app is the capture and handoff surface. Hosted sync, GitHub App bot authorship, and direct mobile issue creation fit naturally as optional team workflows.
 
 ## Moat
 

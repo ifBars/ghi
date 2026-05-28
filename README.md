@@ -27,7 +27,7 @@ It turns rough bug reports, feature ideas, screenshots, logs, and mobile notes i
 - create a real GitHub issue
 - keep the final issue useful for maintainers
 
-The MVP is local-first. The desktop CLI owns Codex and GitHub mutations. The mobile app is a lightweight GitHub-aware capture client that can browse repos/issues and hand new captures to the desktop CLI.
+`ghi` is local-first. The desktop CLI owns Codex and GitHub mutations. The mobile app is a lightweight GitHub-aware capture client that can browse repos/issues and hand new captures to the desktop CLI.
 
 ## Workspace
 
@@ -45,9 +45,9 @@ skills/ghi        Codex skill for agents using the local ghi CLI
 - Git
 - GitHub CLI authenticated with access to the target repo
 - A working local Codex session for `@openai/codex-sdk`
-- Expo Go for mobile development
+- Expo Go for the mobile app
 
-## Install For Development
+## Run Locally
 
 ```bash
 bun install
@@ -157,7 +157,7 @@ The bridge is intentionally repo-local. If mobile selects a different repo than 
 
 ## Issue Creation Behavior
 
-`ghi` creates issues as the currently authenticated GitHub CLI user. It does not create bot-authored issues in the local-first MVP.
+`ghi` creates issues as the currently authenticated GitHub CLI user. Bot-authored issues can be layered on later with a GitHub App, but the default workflow keeps authorship tied to the local operator.
 
 Creation flow:
 
@@ -187,8 +187,8 @@ bun run check       # shared + CLI + mobile TypeScript
 bun run test        # CLI test suite
 bun run build       # build CLI
 bun run smoke:node  # Node runtime smoke for the mobile bridge
-bun run dev:cli     # run CLI from source
-bun run dev:mobile  # start Expo
+bun run dev:cli     # run the CLI from source
+bun run dev:mobile  # start the mobile app
 ```
 
 ## Agent Skill
@@ -197,12 +197,10 @@ This repository includes a Codex-compatible skill at `skills/ghi/SKILL.md`.
 
 Agents can install or copy that skill into their Codex skills directory so they know when to use `ghi`, which flags are live mutations, how to run dry-runs, and how to close issues safely.
 
-## Status
-
-This is an early local-first MVP. The strongest next steps are:
+## Roadmap
 
 - richer desktop job history surfaced on mobile
-- hosted sync for teams
-- GitHub App bot mode
+- hosted sync for team workflows
+- optional GitHub App bot mode
 - ownership/routing suggestions
 - deeper issue clustering across repos and time

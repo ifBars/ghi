@@ -59,7 +59,7 @@ The final issue should summarize the reporter claim, observed symptoms, likely a
 - Playwright skill for terminal browser automation and screenshots
 - Playwright interactive skill for persistent UI/debug sessions
 - Web/network tools for source verification
-- future adapters such as OpenClaw-style external site agents
+- external site adapters for structured bug trackers, forums, and docs
 
 For visual or UI reports, the expected behavior is:
 
@@ -84,7 +84,7 @@ This keeps screenshot capture decoupled from issue creation. Browser-oriented ag
 - Codex Browser skill for in-app browser screenshots
 - Playwright CLI for deterministic browser screenshots
 - Playwright interactive for persistent local UI debugging
-- future OpenClaw-style adapters for external sites
+- external site adapters for bug trackers, forums, and docs
 
 Then `ghi` passes those images into Codex as visual source evidence.
 
@@ -114,9 +114,9 @@ Expected issue sections:
 - Missing Information
 - Maintainer Action Items
 
-## Future Tool Adapter Direction
+## Tool Adapter Direction
 
-The current version relies on Codex tool availability and best-effort local URL prefetch. The next tier should add named exploration adapters:
+`ghi` keeps source exploration adapter-oriented:
 
 - `browser`: visible/hidden browser inspection and screenshots
 - `playwright`: deterministic page snapshots and screenshot artifacts
