@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { runCreateIssueFlow, type GithubClient } from "./main.js";
-import type { GitContext, IssuePayload } from "./domain.js";
+import type { GitContext, IssuePayload } from "../core/domain.js";
+import { runCreateIssueFlow, type GithubClient } from "./create.js";
 
 const git: GitContext = {
   root: "/repo",

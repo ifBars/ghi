@@ -1,4 +1,4 @@
-import { startMobileBridge } from "../mobileBridge.js";
+import { startMobileBridge } from "../mobile/bridge.js";
 
 const port = Number(process.env.GHI_MOBILE_BRIDGE_SMOKE_PORT ?? "3991");
 const token = "smoke-test-token";

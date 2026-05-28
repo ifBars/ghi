@@ -1,6 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
-import type { IssueTemplate } from "./domain.js";
+import type { IssueTemplate } from "../core/domain.js";
 
 const TEMPLATE_EXTENSIONS = new Set([".md", ".yml", ".yaml"]);
 

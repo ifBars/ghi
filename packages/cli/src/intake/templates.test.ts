@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { discoverIssueTemplates } from "./templates.js";
-import { parseGitHubRemote } from "./git.js";
+import { parseGitHubRemote } from "../integrations/git.js";
 
 describe("templates", () => {
   test("discovers markdown and yaml issue templates", async () => {

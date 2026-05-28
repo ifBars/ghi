@@ -1,4 +1,4 @@
-import type { ExistingIssue, IssuePayload, IssueRelationship } from "./domain.js";
+import type { ExistingIssue, IssuePayload, IssueRelationship } from "../core/domain.js";
 
 export function buildDedupeSearchQuery(payload: IssuePayload): string {
   const labelTerms = payload.labels.filter((label) => label !== "ai-draft").slice(0, 3);

@@ -1,5 +1,5 @@
 import { Codex } from "@openai/codex-sdk";
-import { issuePayloadSchema, type GitContext, type IssuePayload, type IssueTemplate, type SourceContext } from "./domain.js";
+import { issuePayloadSchema, type GitContext, type IssuePayload, type IssueTemplate, type SourceContext } from "../core/domain.js";
 
 export type IssueGenerationInput = {
   roughInput: string;

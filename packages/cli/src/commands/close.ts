@@ -1,9 +1,9 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { CodexClosureGenerator, type ClosureGenerator } from "./codexClosureGenerator.js";
-import { closureStateReasonSchema, type ClosurePayload, type ClosureStateReason, type GitContext, type IssueView } from "./domain.js";
-import { getGitContext } from "./git.js";
-import { GithubCli } from "./githubCli.js";
+import { CodexClosureGenerator, type ClosureGenerator } from "../ai/codexClosureGenerator.js";
+import { closureStateReasonSchema, type ClosurePayload, type ClosureStateReason, type GitContext, type IssueView } from "../core/domain.js";
+import { getGitContext } from "../integrations/git.js";
+import { GithubCli } from "../integrations/githubCli.js";
 
 export type CloseGithubClient = {
   viewIssue(issue: string): Promise<IssueView>;

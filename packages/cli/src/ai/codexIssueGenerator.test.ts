@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { buildIssuePrompt, parseIssuePayload } from "./codexIssueGenerator.js";
-import type { GitContext } from "./domain.js";
+import type { GitContext } from "../core/domain.js";
 
 const git: GitContext = {
   root: "/repo",

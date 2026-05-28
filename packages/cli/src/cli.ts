@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { writeSync } from "node:fs";
-import { runCloseIssueFlow } from "./close.js";
-import { formatDoctorReport, runDoctor } from "./doctor.js";
-import { enqueueBackgroundJob, formatJobList, formatJobView, listJobs, loadJob, readJobLog, runWorkerJob } from "./jobs.js";
-import { extractCreatedIssueUrl, runCreateIssueFlow } from "./main.js";
-import { startMobileBridge } from "./mobileBridge.js";
+import { enqueueBackgroundJob, formatJobList, formatJobView, listJobs, loadJob, readJobLog, runWorkerJob } from "./background/jobs.js";
+import { runCloseIssueFlow } from "./commands/close.js";
+import { extractCreatedIssueUrl, runCreateIssueFlow } from "./commands/create.js";
+import { formatDoctorReport, runDoctor } from "./commands/doctor.js";
+import { startMobileBridge } from "./mobile/bridge.js";
 
 const program = new Command();
 

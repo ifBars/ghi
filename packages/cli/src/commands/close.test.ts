@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { normalizeStateReason, runCloseIssueFlow, type CloseGithubClient } from "./close.js";
-import type { ClosurePayload, GitContext, IssueView } from "./domain.js";
+import type { ClosurePayload, GitContext, IssueView } from "../core/domain.js";
 
 const git: GitContext = {
   root: "/repo",

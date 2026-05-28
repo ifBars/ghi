@@ -1,6 +1,6 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import type { IssuePayload } from "./domain.js";
+import type { IssuePayload } from "../core/domain.js";
 
 export async function reviewIssueInTerminal(payload: IssuePayload): Promise<boolean> {
   output.write(`\n# ${payload.title}\n\n${payload.body}\n\n`);

@@ -1,5 +1,5 @@
 import { execa } from "execa";
-import type { GitContext } from "./domain.js";
+import type { GitContext } from "../core/domain.js";
 
 export async function git(args: string[], cwd: string): Promise<string> {
   const result = await execa("git", args, { cwd });

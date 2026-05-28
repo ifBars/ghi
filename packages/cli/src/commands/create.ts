@@ -1,13 +1,13 @@
-import { loadConfig, type ConfigOverrides } from "./config.js";
-import { CodexIssueGenerator, type IssueGenerator } from "./codexIssueGenerator.js";
-import { buildDedupeSearchQuery, formatRelationshipComment, rankSimpleRelationships } from "./dedupe.js";
-import type { CreatedIssue, GitContext, IssuePayload, IssueTemplate } from "./domain.js";
-import { getGitContext } from "./git.js";
-import { GithubCli } from "./githubCli.js";
-import { appendHiddenMetadata, buildMetadata } from "./metadata.js";
-import { reviewIssueInTerminal } from "./review.js";
-import { collectSourceContexts, extractUrlsFromText } from "./sources.js";
-import { discoverIssueTemplates } from "./templates.js";
+import { CodexIssueGenerator, type IssueGenerator } from "../ai/codexIssueGenerator.js";
+import { loadConfig, type ConfigOverrides } from "../core/config.js";
+import type { CreatedIssue, GitContext, IssuePayload, IssueTemplate } from "../core/domain.js";
+import { appendHiddenMetadata, buildMetadata } from "../core/metadata.js";
+import { getGitContext } from "../integrations/git.js";
+import { GithubCli } from "../integrations/githubCli.js";
+import { buildDedupeSearchQuery, formatRelationshipComment, rankSimpleRelationships } from "../intake/dedupe.js";
+import { collectSourceContexts, extractUrlsFromText } from "../intake/sources.js";
+import { discoverIssueTemplates } from "../intake/templates.js";
+import { reviewIssueInTerminal } from "../ui/review.js";
 
 export type GithubClient = {
   listLabels(): Promise<{ name: string }[]>;

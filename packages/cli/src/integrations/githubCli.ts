@@ -8,7 +8,7 @@ import type {
   CreatedIssue,
   ExistingIssue,
   IssueView,
-} from "./domain.js";
+} from "../core/domain.js";
 
 export type CommandResult = {
   stdout: string;

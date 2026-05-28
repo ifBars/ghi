@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-export type IntakeKind = "bug" | "feature" | "idea" | "task";
+import type { IntakeKind } from "@ghi/shared";
+export type { IntakeKind } from "@ghi/shared";
 
 export type MobileAttachment = {
   id: string;

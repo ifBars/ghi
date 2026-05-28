@@ -1,5 +1,5 @@
 import { execa } from "execa";
-import { getGitContext } from "./git.js";
+import { getGitContext } from "../integrations/git.js";
 
 export type DoctorCheck = {
   name: string;

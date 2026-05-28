@@ -1,4 +1,4 @@
-import type { SourceContext } from "./domain.js";
+import type { SourceContext } from "../core/domain.js";
 
 export type SourceCollectionInput = {
   urls: string[];

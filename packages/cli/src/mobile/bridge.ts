@@ -5,8 +5,8 @@ import { extname, join } from "node:path";
 import { randomBytes } from "node:crypto";
 import { createRequire } from "node:module";
 import type { QrcodeTerminal } from "qrcode-terminal";
-import { getGitContext } from "./git.js";
-import { enqueueBackgroundJob, getJobsDir } from "./jobs.js";
+import { enqueueBackgroundJob, getJobsDir } from "../background/jobs.js";
+import { getGitContext } from "../integrations/git.js";
 
 const require = createRequire(import.meta.url);
 const qrcodeTerminal = require("qrcode-terminal") as QrcodeTerminal;

@@ -4,7 +4,7 @@ import {
   formatRelationshipComment,
   rankSimpleRelationships,
 } from "./dedupe.js";
-import type { ExistingIssue, IssuePayload } from "./domain.js";
+import type { ExistingIssue, IssuePayload } from "../core/domain.js";
 
 const payload: IssuePayload = {
   title: "Inventory duplicates after reconnect",

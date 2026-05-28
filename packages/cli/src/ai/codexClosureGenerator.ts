@@ -5,7 +5,7 @@ import {
   type ClosureStateReason,
   type GitContext,
   type IssueView,
-} from "./domain.js";
+} from "../core/domain.js";
 
 export type ClosureGenerationInput = {
   issue: IssueView;

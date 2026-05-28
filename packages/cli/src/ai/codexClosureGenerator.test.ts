@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { buildClosurePrompt, parseClosurePayload } from "./codexClosureGenerator.js";
-import type { GitContext, IssueView } from "./domain.js";
+import type { GitContext, IssueView } from "../core/domain.js";
 
 const git: GitContext = {
   root: "/repo",
