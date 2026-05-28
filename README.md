@@ -36,6 +36,7 @@ packages/cli      Codex + GitHub CLI workflow
 packages/shared   Shared intake primitives
 apps/mobile       Expo iOS app for GitHub browsing and mobile capture
 docs              Product notes, plans, and demo material
+skills/ghi        Codex skill for agents using the local ghi CLI
 ```
 
 ## Requirements
@@ -189,6 +190,12 @@ bun run smoke:node  # Node runtime smoke for the mobile bridge
 bun run dev:cli     # run CLI from source
 bun run dev:mobile  # start Expo
 ```
+
+## Agent Skill
+
+This repository includes a Codex-compatible skill at `skills/ghi/SKILL.md`.
+
+Agents can install or copy that skill into their Codex skills directory so they know when to use `ghi`, which flags are live mutations, how to run dry-runs, and how to close issues safely.
 
 ## Status
 
