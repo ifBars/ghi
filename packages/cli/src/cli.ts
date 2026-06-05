@@ -38,6 +38,7 @@ program
       await runCreateIssueFlow(job.report, {
         cwd: job.cwd,
         now: job.args.includes("--now"),
+        clarify: false,
         review: false,
         dryRun: job.args.includes("--dry-run"),
         urls: job.urls ?? [],
@@ -123,6 +124,7 @@ program
   .option("--review", "review the generated issue in the terminal before creating")
   .option("--dry-run", "generate and print the issue payload without creating a GitHub issue")
   .option("--async", "enqueue a background job and return immediately")
+  .option("--clarify", "ask follow-up clarification questions when initial draft quality is weak")
   .option("--url <url>", "external source URL to inspect or cite", collectOption)
   .option("--quote <text>", "quoted external report text to use as source context", collectOption)
   .option("--screenshot <path>", "screenshot or image path to attach as visual source evidence", collectOption)
@@ -137,6 +139,7 @@ program
     }
 
     if (options.async) {
+      ensureAsyncCompatible(options);
       const job = await enqueueBackgroundJob({
         cwd: process.cwd(),
         report: roughInput,
@@ -160,6 +163,7 @@ program
       cwd: process.cwd(),
       now: options.now,
       review: options.review,
+      clarify: options.clarify,
       dryRun: options.dryRun,
       urls: options.url ?? [],
       quotes: options.quote ?? [],
@@ -175,6 +179,7 @@ program
   .option("--review", "review the generated issue in the terminal before creating")
   .option("--dry-run", "generate and print the issue payload without creating a GitHub issue")
   .option("--async", "enqueue a background job and return immediately")
+  .option("--clarify", "ask follow-up clarification questions when initial draft quality is weak")
   .option("--url <url>", "external source URL to inspect or cite", collectOption)
   .option("--quote <text>", "quoted external report text to use as source context", collectOption)
   .option("--screenshot <path>", "screenshot or image path to attach as visual source evidence", collectOption)
@@ -189,6 +194,7 @@ program
     }
 
     if (options.async) {
+      ensureAsyncCompatible(options);
       const job = await enqueueBackgroundJob({
         cwd: process.cwd(),
         report: roughInput,
@@ -212,6 +218,7 @@ program
       cwd: process.cwd(),
       now: options.now,
       review: options.review,
+      clarify: options.clarify,
       dryRun: options.dryRun,
       urls: options.url ?? [],
       quotes: options.quote ?? [],
@@ -233,6 +240,7 @@ type CreateCommandOptions = {
   screenshot?: string[];
   explore?: boolean;
   fetch?: boolean;
+  clarify?: boolean;
   fromStdin?: boolean;
   json?: boolean;
 };
@@ -259,6 +267,12 @@ function collectForwardedArgs(options: { now?: boolean; dryRun?: boolean }): str
     ...(options.now ? ["--now"] : []),
     ...(options.dryRun ? ["--dry-run"] : []),
   ];
+}
+
+function ensureAsyncCompatible(options: CreateCommandOptions): void {
+  if (options.clarify) {
+    program.error("--clarify cannot be used with --async because clarification questions require an interactive terminal");
+  }
 }
 
 function printQueuedJob(id: string): void {

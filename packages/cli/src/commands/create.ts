@@ -8,7 +8,7 @@ import { buildDedupeSearchQuery, formatRelationshipComment, rankSimpleRelationsh
 import { collectSourceContexts, extractUrlsFromText } from "../intake/sources.js";
 import { discoverIssueTemplates } from "../intake/templates.js";
 import { assessIssueQuality, formatQualityWarnings, type IssueQualityReport } from "../intake/quality.js";
-import { reviewIssueInTerminal } from "../ui/review.js";
+import { askClarificationQuestions, reviewIssueInTerminal } from "../ui/review.js";
 
 export type GithubClient = {
   listLabels(): Promise<{ name: string }[]>;
@@ -29,6 +29,7 @@ export type CreateFlowOptions = ConfigOverrides & {
   explore?: boolean;
   fetchUrls?: boolean;
   screenshots?: string[];
+  clarify?: boolean;
 };
 
 export type CreateFlowDeps = {
@@ -39,6 +40,7 @@ export type CreateFlowDeps = {
   reviewIssue?: (payload: IssuePayload) => Promise<boolean>;
   collectSourceContexts?: typeof collectSourceContexts;
   write?: (message: string) => void;
+  askClarificationQuestions?: (questions: string[]) => Promise<string[]>;
 };
 
 export async function runCreateIssueFlow(
@@ -46,7 +48,6 @@ export async function runCreateIssueFlow(
   options: CreateFlowOptions,
   deps: CreateFlowDeps = {},
 ): Promise<{ payload: IssuePayload; createdIssue: CreatedIssue | null }> {
-  const write = deps.write ?? ((message) => process.stdout.write(message));
   const config = loadConfig({
     creationMode: options.review
       ? "terminal_review"
@@ -54,6 +55,7 @@ export async function runCreateIssueFlow(
         ? "immediate_draft"
         : options.creationMode,
   });
+  const write = deps.write ?? ((message) => process.stdout.write(message));
 
   const gitContext = await (deps.getGitContext ?? getGitContext)(options.cwd);
   const templates = await (deps.discoverIssueTemplates ?? discoverIssueTemplates)(gitContext.root);
@@ -72,8 +74,17 @@ export async function runCreateIssueFlow(
     sources,
     exploreSources: Boolean(options.explore || urls.length > 0),
     screenshots: options.screenshots ?? [],
+    clarificationNotes: options.clarify ? [] : undefined,
   };
-  const { payload, quality } = await generateMaintainerReadyIssue(issueGenerator, generationInput, roughInput, write);
+  const askClarification = deps.askClarificationQuestions ?? askClarificationQuestions;
+  const { payload, quality } = await generateMaintainerReadyIssue(
+    issueGenerator,
+    generationInput,
+    roughInput,
+    write,
+    options.clarify ?? false,
+    askClarification,
+  );
   const qualityWarnings = formatQualityWarnings(quality);
   if (qualityWarnings) {
     write(qualityWarnings);
@@ -140,9 +151,29 @@ async function generateMaintainerReadyIssue(
   input: Parameters<IssueGenerator["generate"]>[0],
   roughInput: string,
   write: (message: string) => void,
+  clarify: boolean,
+  askClarificationQuestions: (questions: string[]) => Promise<string[]>,
 ): Promise<{ payload: IssuePayload; quality: IssueQualityReport }> {
   let payload = await issueGenerator.generate(input);
   let quality = assessIssueQuality(roughInput, payload);
+  let clarificationNotes: string[] = [];
+
+  if (clarify && shouldRequestQualityRevision(quality)) {
+    const questions = buildClarificationQuestions(quality);
+    if (questions.length > 0) {
+      write("Issue quality is below target. Asking follow-up clarification questions.\n");
+      clarificationNotes = await askClarificationQuestions(questions);
+      if (clarificationNotes.length > 0) {
+        payload = await issueGenerator.generate({
+          ...input,
+          previousDraft: payload,
+          revisionFeedback: quality.revisionFeedback,
+          clarificationNotes,
+        });
+        quality = assessIssueQuality(roughInput, payload);
+      }
+    }
+  }
 
   for (let attempt = 1; attempt <= 2 && shouldRequestQualityRevision(quality); attempt += 1) {
     write(`Quality revision ${attempt}: issue draft scored ${quality.score.total}/${quality.score.maximum}; asking Codex to revise with scoring feedback.\n`);
@@ -150,6 +181,7 @@ async function generateMaintainerReadyIssue(
       ...input,
       previousDraft: payload,
       revisionFeedback: quality.revisionFeedback,
+      clarificationNotes: clarificationNotes.length > 0 ? clarificationNotes : input.clarificationNotes,
     });
     quality = assessIssueQuality(roughInput, payload);
   }
@@ -161,10 +193,70 @@ function shouldRequestQualityRevision(quality: IssueQualityReport): boolean {
   return quality.blocking.length > 0 || quality.score.total < 75;
 }
 
-export function extractCreatedIssueUrl(output: string): string | null {
-  const match = output.match(/Created issue:\s+(?<url>https?:\/\/\S+)/);
-  return match?.groups?.url ?? null;
+function buildClarificationQuestions(quality: IssueQualityReport): string[] {
+  const questions = new Set<string>();
+  const dimensionNames = [
+    "expected_observed_repro",
+    "specificity",
+    "evidence",
+    "uncertainty_hygiene",
+    "scope_control",
+    "template_fit",
+  ];
+
+  for (const feedback of quality.revisionFeedback) {
+    const lower = feedback.toLowerCase();
+    if (lower.includes("observed") && lower.includes("actual")) {
+      questions.add("What exact observed behavior and steps should I include in the issue body?");
+      continue;
+    }
+    if (lower.includes("expected behavior")) {
+      questions.add("What is the expected behavior or outcome, and where does it currently fail?");
+      continue;
+    }
+    if (lower.includes("reproduction") || lower.includes("steps")) {
+      questions.add("Can you provide concrete, ordered reproduction steps and environment details?");
+      continue;
+    }
+    if (lower.includes("evidence")) {
+      questions.add("What evidence (logs, screenshot links, version/build info) should be added for confidence?");
+      continue;
+    }
+    if (lower.includes("specific")) {
+      questions.add("Can you share precise identifiers (files, components, classes, or paths) impacted by this issue?");
+      continue;
+    }
+    if (lower.includes("scope")) {
+      questions.add("Can you narrow the scope (what is in/out of scope for this issue)?");
+      continue;
+    }
+  }
+
+  for (const warning of quality.warnings) {
+    const lower = warning.toLowerCase();
+    if (lower.includes("local filesystem path") || lower.includes("filesystem path")) {
+      questions.add("Should we remove local filesystem paths from the issue body? If needed, what alternative maintainer-facing context should replace them?");
+      continue;
+    }
+    if (lower.includes("rough-input mechanics")) {
+      questions.add("Can you provide any maintainer-facing wording to replace placeholder or rough-input language?");
+      continue;
+    }
+    if (lower.includes("placeholder")) {
+      questions.add("What concrete phrasing should replace placeholder/instructional wording?");
+      continue;
+    }
+  }
+
+  for (const dimension of dimensionNames) {
+    if (quality.revisionFeedback.some((feedback) => feedback.toLowerCase().includes(dimension))) {
+      questions.add(`What additional details would strengthen the issue's ${dimension.replace(/_/g, " ")} section?`);
+    }
+  }
+
+  return [...questions].slice(0, 4);
 }
+
 
 async function postDedupeComment(
   github: GithubClient,
@@ -205,4 +297,9 @@ function normalizeList(values: string[]): string[] {
 
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+export function extractCreatedIssueUrl(output: string): string | null {
+  const match = output.match(/Created issue:\s*(https?:\/\/[^\s]+)/);
+  return match ? match[1] : null;
 }

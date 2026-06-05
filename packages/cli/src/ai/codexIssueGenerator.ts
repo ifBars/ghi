@@ -11,6 +11,7 @@ export type IssueGenerationInput = {
   screenshots: string[];
   previousDraft?: IssuePayload;
   revisionFeedback?: string[];
+  clarificationNotes?: string[];
 };
 
 export type IssueGenerator = {
@@ -96,6 +97,12 @@ export function buildIssuePrompt(input: IssueGenerationInput): string {
             instruction: "Revise the previous draft using the scoring feedback. Return a complete replacement payload, not a patch.",
             previousDraft: input.previousDraft,
             scoringFeedback: input.revisionFeedback ?? [],
+          }
+        : null,
+      clarification: input.clarificationNotes && input.clarificationNotes.length > 0
+        ? {
+            instruction: "Use the following user clarifications to resolve uncertainty and improve the draft. Do not include question labels or raw Q&A in the issue body.",
+            notes: input.clarificationNotes,
           }
         : null,
       git: {

@@ -50,6 +50,25 @@ describe("Codex issue generator", () => {
     expect(prompt).toContain("Avoid dumping local file paths");
   });
 
+  test("prompt includes clarification notes for follow-up context", () => {
+    const prompt = buildIssuePrompt({
+      roughInput: "inventory dupes after reconnect",
+      git,
+      templates: [],
+      sources: [],
+      exploreSources: false,
+      screenshots: [],
+      clarificationNotes: [
+        "Q: What exact observed behavior and steps should I include in the issue body?\nA: App crashes after reconnecting with specific payload in payload.ts.",
+        "Q: Can you provide concrete, ordered reproduction steps and environment details?\nA: Run reconnect flow on Windows with version 1.2.3 in offline mode.",
+      ],
+    });
+
+    expect(prompt).toContain("\"clarification\"");
+    expect(prompt).toContain("Use the following user clarifications");
+    expect(prompt).toContain("App crashes after reconnecting");
+  });
+
   test("prompt includes prior draft and scoring feedback for revisions", () => {
     const prompt = buildIssuePrompt({
       roughInput: "inventory dupes after reconnect",

@@ -230,6 +230,90 @@ describe("runCreateIssueFlow", () => {
     expect(result.createdIssue).toBeNull();
   });
 
+  test("asks clarification questions and revises when clarify is enabled", async () => {
+    const output: string[] = [];
+    const generatedInputs: unknown[] = [];
+    const askedQuestions: string[][] = [];
+    const weakPayload: IssuePayload = {
+      ...payload,
+      body: "## Summary\n\nInventory duplicates.",
+    };
+
+    const result = await runCreateIssueFlow("inventory duplicates after reconnect", {
+      cwd: "/repo",
+      dryRun: true,
+      clarify: true,
+    }, {
+      getGitContext: async () => git,
+      discoverIssueTemplates: async () => [],
+      issueGenerator: {
+        generate: async (input) => {
+          generatedInputs.push(input);
+          return generatedInputs.length === 1 ? weakPayload : payload;
+        },
+      },
+      collectSourceContexts: async () => [],
+      askClarificationQuestions: async (questions) => {
+        askedQuestions.push(questions);
+        return questions.slice(0, 1).map((question) => `Q: ${question}\nA: Add concrete repro steps and expected behavior.`);
+      },
+      write: (message) => output.push(message),
+    });
+
+    expect(result.createdIssue).toBeNull();
+    expect(generatedInputs).toHaveLength(2);
+    expect(askedQuestions.length).toBe(1);
+    expect(askedQuestions[0].length).toBeGreaterThan(0);
+    expect((generatedInputs[1] as { clarificationNotes?: string[] }).clarificationNotes?.[0]).toContain("Add concrete repro");
+    expect(output.join(""))
+      .toContain("Issue quality is below target. Asking follow-up clarification questions.");
+  });
+
+  test("keeps clarification notes during later quality revisions", async () => {
+    const generatedInputs: unknown[] = [];
+    const weakPayload: IssuePayload = {
+      ...payload,
+      body: "## Summary\n\nInventory duplicates.",
+    };
+    const partialPayload: IssuePayload = {
+      ...payload,
+      body: `## Summary
+
+Inventory duplicates after reconnect.
+
+## Steps to Reproduce
+
+1. Reconnect.
+`,
+    };
+
+    await runCreateIssueFlow("inventory duplicates after reconnect", {
+      cwd: "/repo",
+      dryRun: true,
+      clarify: true,
+    }, {
+      getGitContext: async () => git,
+      discoverIssueTemplates: async () => [],
+      issueGenerator: {
+        generate: async (input) => {
+          generatedInputs.push(input);
+          if (generatedInputs.length === 1) return weakPayload;
+          if (generatedInputs.length === 2) return partialPayload;
+          return payload;
+        },
+      },
+      collectSourceContexts: async () => [],
+      askClarificationQuestions: async (questions) => [
+        `Q: ${questions[0]}\nA: Add concrete repro steps and expected behavior.`,
+      ],
+      write: () => undefined,
+    });
+
+    expect(generatedInputs).toHaveLength(3);
+    expect((generatedInputs[2] as { clarificationNotes?: string[] }).clarificationNotes?.[0])
+      .toContain("Add concrete repro");
+  });
+
   test("passes URL and quote source context to issue generator", async () => {
     let generatedInput: unknown;
 
