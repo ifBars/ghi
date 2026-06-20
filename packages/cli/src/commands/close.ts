@@ -39,7 +39,10 @@ export async function runCloseIssueFlow(
 ): Promise<{ payload: ClosurePayload; closed: boolean }> {
   const write = deps.write ?? ((message) => process.stdout.write(message));
   const gitContext = await (deps.getGitContext ?? getGitContext)(options.cwd);
-  const github = deps.githubFactory?.(gitContext.root) ?? new GithubCli({ cwd: gitContext.root });
+  const github = deps.githubFactory?.(gitContext.root) ?? new GithubCli({
+    cwd: gitContext.root,
+    repositoryFullName: getRepositoryFullName(gitContext),
+  });
   const issue = await github.viewIssue(options.issue);
   const duplicateOf = options.duplicateOf ? await github.viewIssue(options.duplicateOf) : null;
   const requestedStateReason = normalizeStateReason(options.stateReason, Boolean(duplicateOf));
@@ -94,6 +97,12 @@ export function normalizeStateReason(
 
 function normalizeReasonNotes(notes: string[]): string[] {
   return notes.map((note) => note.trim()).filter(Boolean);
+}
+
+function getRepositoryFullName(gitContext: GitContext): string | null {
+  return gitContext.remoteOwner && gitContext.remoteName
+    ? `${gitContext.remoteOwner}/${gitContext.remoteName}`
+    : null;
 }
 
 async function reviewClosureInTerminal(payload: ClosurePayload): Promise<boolean> {

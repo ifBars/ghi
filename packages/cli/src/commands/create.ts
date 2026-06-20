@@ -108,7 +108,10 @@ export async function runCreateIssueFlow(
     return { payload: { ...payload, body }, createdIssue: null };
   }
 
-  const github = deps.githubFactory?.(gitContext.root) ?? new GithubCli({ cwd: gitContext.root });
+  const github = deps.githubFactory?.(gitContext.root) ?? new GithubCli({
+    cwd: gitContext.root,
+    repositoryFullName: getRepositoryFullName(gitContext),
+  });
   let canUseAiDraftLabel = true;
   try {
     await github.ensureAiDraftLabel();
@@ -302,4 +305,10 @@ function formatError(error: unknown): string {
 export function extractCreatedIssueUrl(output: string): string | null {
   const match = output.match(/Created issue:\s*(https?:\/\/[^\s]+)/);
   return match ? match[1] : null;
+}
+
+function getRepositoryFullName(gitContext: GitContext): string | null {
+  return gitContext.remoteOwner && gitContext.remoteName
+    ? `${gitContext.remoteOwner}/${gitContext.remoteName}`
+    : null;
 }

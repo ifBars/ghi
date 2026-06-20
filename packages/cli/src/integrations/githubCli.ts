@@ -30,22 +30,25 @@ export type GithubLabel = {
 
 export type GithubCliOptions = {
   cwd: string;
+  repositoryFullName?: string | null;
   runner?: CommandRunner;
 };
 
 export class GithubCli {
   private readonly cwd: string;
+  private readonly repositoryFullName: string | null;
   private readonly runner: CommandRunner;
 
   constructor(options: GithubCliOptions) {
     this.cwd = options.cwd;
+    this.repositoryFullName = options.repositoryFullName ?? null;
     this.runner = options.runner ?? defaultRunner;
   }
 
   async listLabels(): Promise<GithubLabel[]> {
     const result = await this.runner(
       "gh",
-      ["label", "list", "--json", "name,color,description", "--limit", "200"],
+      ["label", "list", ...this.repoArgs(), "--json", "name,color,description", "--limit", "200"],
       this.cwd,
     );
     return JSON.parse(result.stdout || "[]") as GithubLabel[];
@@ -63,6 +66,7 @@ export class GithubCli {
         "label",
         "create",
         "ai-draft",
+        ...this.repoArgs(),
         "--color",
         "BFD4F2",
         "--description",
@@ -92,7 +96,7 @@ export class GithubCli {
 
     try {
       await writeFile(bodyFile, options.body, "utf8");
-      const args = ["issue", "create", "--title", options.title, "--body-file", bodyFile];
+      const args = ["issue", "create", ...this.repoArgs(), "--title", options.title, "--body-file", bodyFile];
       for (const label of options.labels) {
         args.push("--label", label);
       }
@@ -112,6 +116,7 @@ export class GithubCli {
       [
         "issue",
         "list",
+        ...this.repoArgs(),
         "--state",
         "all",
         "--search",
@@ -133,6 +138,7 @@ export class GithubCli {
         "issue",
         "view",
         issue,
+        ...this.repoArgs(),
         "--comments",
         "--json",
         "number,title,state,url,body,labels,comments,stateReason",
@@ -143,7 +149,11 @@ export class GithubCli {
   }
 
   async comment(issueNumber: number, body: string): Promise<void> {
-    await this.runner("gh", ["issue", "comment", String(issueNumber), "--body", body], this.cwd);
+    await this.runner(
+      "gh",
+      ["issue", "comment", String(issueNumber), ...this.repoArgs(), "--body", body],
+      this.cwd,
+    );
   }
 
   async closeIssue(options: {
@@ -152,7 +162,7 @@ export class GithubCli {
     stateReason: ClosureStateReason;
     duplicateOf?: string;
   }): Promise<void> {
-    const args = ["issue", "close", options.issue, "--comment", options.comment];
+    const args = ["issue", "close", options.issue, ...this.repoArgs(), "--comment", options.comment];
     if (options.duplicateOf) {
       args.push("--duplicate-of", options.duplicateOf);
     } else {
@@ -160,6 +170,10 @@ export class GithubCli {
     }
 
     await this.runner("gh", args, this.cwd);
+  }
+
+  private repoArgs(): string[] {
+    return this.repositoryFullName ? ["--repo", this.repositoryFullName] : [];
   }
 }
 

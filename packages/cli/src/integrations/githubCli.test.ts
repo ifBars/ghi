@@ -81,6 +81,29 @@ describe("GithubCli", () => {
     ]);
   });
 
+  test("pins issue creation to the configured repository", async () => {
+    const { runner, calls } = fakeRunner(["https://github.com/ifBars/S1API/issues/83"]);
+    const github = new GithubCli({ cwd: "/repo", repositoryFullName: "ifBars/S1API", runner });
+
+    await github.createIssue({
+      title: "Safer default weapons",
+      body: "Issue body",
+      labels: [],
+    });
+
+    expect(calls[0]).toEqual([
+      "gh",
+      "issue",
+      "create",
+      "--repo",
+      "ifBars/S1API",
+      "--title",
+      "Safer default weapons",
+      "--body-file",
+      expect.stringMatching(/body\.md$/),
+    ]);
+  });
+
   test("writes issue body through a body file", async () => {
     let bodyFileContent = "";
     const runner: CommandRunner = async (_file, args) => {
@@ -106,6 +129,31 @@ describe("GithubCli", () => {
     await github.comment(42, "Possible duplicate of #1");
 
     expect(calls[0]).toEqual(["gh", "issue", "comment", "42", "--body", "Possible duplicate of #1"]);
+  });
+
+  test("pins labels and issue lookups to the configured repository", async () => {
+    const { runner, calls } = fakeRunner(["[]", "[]", '{"number":42,"title":"Bug","state":"OPEN","url":"u"}']);
+    const github = new GithubCli({ cwd: "/repo", repositoryFullName: "ifBars/S1API", runner });
+
+    await github.listLabels();
+    await github.listIssuesForSearch("DefaultWeaponAssetPath in:title", 3);
+    await github.viewIssue("42");
+
+    expect(calls[0]).toEqual([
+      "gh",
+      "label",
+      "list",
+      "--repo",
+      "ifBars/S1API",
+      "--json",
+      "name,color,description",
+      "--limit",
+      "200",
+    ]);
+    expect(calls[1]).toContain("--repo");
+    expect(calls[1]).toContain("ifBars/S1API");
+    expect(calls[2]).toContain("--repo");
+    expect(calls[2]).toContain("ifBars/S1API");
   });
 
   test("lists issues with search query and requested limit", async () => {
